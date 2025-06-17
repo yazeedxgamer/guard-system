@@ -3,14 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Title and Favicon -->
     <title>Arkanat Guard System</title>
     <link rel="icon" type="image/svg+xml" href="https://arkanat.com.sa/wp-content/uploads/2024/07/logo.svg">
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -83,7 +80,6 @@
 </head>
 <body class="bg-slate-900">
 
-    <!-- =========== New Landing Page =========== -->
     <div id="landing-page" class="page active flex-col justify-center items-center p-4 sm:p-8">
         <div class="w-full max-w-4xl text-center">
             <img src="https://arkanat.com.sa/wp-content/uploads/2024/07/logo.svg" alt="شعار اركانات" class="h-20 sm:h-24 mb-6 mx-auto" onerror="this.onerror=null; this.src='https://placehold.co/200x70/FFFFFF/000000?text=Arkanat';">
@@ -102,7 +98,6 @@
     </div>
     <style>.login-option-card { @apply bg-slate-800 p-8 rounded-2xl shadow-lg cursor-pointer transition-all duration-300 hover:shadow-blue-500/20 hover:-translate-y-2 border border-slate-700 hover:border-blue-500; }</style>
 
-    <!-- =========== Unified Login Page =========== -->
     <div id="login-page" class="page justify-center items-center bg-slate-900 p-4">
         <div class="w-full max-w-md bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl p-8 space-y-6">
             <div class="text-center"><h2 id="login-title" class="text-3xl font-bold text-white">تسجيل الدخول</h2></div>
@@ -113,7 +108,6 @@
         </div>
     </div>
     
-    <!-- =========== Guard Dashboard Page =========== -->
     <div id="guard-dashboard-page" class="page flex-col justify-center items-center bg-slate-900 p-4">
         <div class="w-full max-w-4xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl">
              <div class="p-6 border-b border-slate-700 flex justify-between items-center"><h2 class="text-2xl font-bold text-white">مرحباً بك، <span id="guard-name-display"></span></h2><button class="logout-btn text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">تسجيل الخروج</button></div>
@@ -126,7 +120,6 @@
         </div>
     </div>
 
-    <!-- =========== Admin/Ops Dashboard Page =========== -->
     <div id="admin-dashboard-page" class="page flex-col items-center bg-slate-900 p-4 sm:p-6 md:p-8 w-full">
          <div class="w-full max-w-7xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl">
             <div class="p-4 sm:p-6 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -137,7 +130,6 @@
         </div>
     </div>
     
-    <!-- =========== HR Dashboard Page =========== -->
     <div id="hr-dashboard-page" class="page flex-col items-center bg-slate-900 p-4 sm:p-6 md:p-8 w-full">
         <div class="w-full max-w-7xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl">
             <div class="p-4 sm:p-6 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4"><h2 class="text-2xl font-bold text-white">لوحة تحكم الموارد البشرية</h2><button class="logout-btn text-white font-semibold bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition">تسجيل الخروج</button></div>
@@ -146,9 +138,7 @@
         </div>
     </div>
 
-    <!-- Modals -->
     <div id="modal-container" class="hidden fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4 overflow-y-auto">
-        <!-- Add/Edit Guard Modal -->
         <div class="modal-content flex-col w-full max-w-3xl bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="guard-form-modal">
             <h3 id="guard-form-title" class="text-xl font-bold p-4 border-b border-slate-700"></h3>
             <div class="p-6 space-y-6">
@@ -175,7 +165,6 @@
             <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button><button id="submit-guard-form-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">حفظ</button></div>
         </div>
 
-        <!-- Add/Edit Staff Modal -->
         <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="staff-form-modal">
             <h3 id="staff-form-title" class="text-xl font-bold p-4 border-b border-slate-700"></h3>
             <input type="hidden" id="staff-form-id">
@@ -200,8 +189,7 @@
             </div>
         </div>
         
-         <!-- Financial Transaction Modal -->
-        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="financial-transaction-modal">
+         <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="financial-transaction-modal">
             <h3 id="financial-transaction-title" class="text-xl font-bold p-4 border-b border-slate-700"></h3>
             <div class="p-6 space-y-4">
                 <input type="hidden" id="financial-transaction-guard-id">
@@ -221,21 +209,18 @@
             </div>
         </div>
 
-        <!-- Schedule Display Modal -->
         <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="schedule-display-modal">
             <h3 id="schedule-modal-title" class="text-xl font-bold p-4 border-b border-slate-700">جدول الدوام</h3>
             <div id="schedule-modal-body" class="p-6"></div>
             <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button></div>
         </div>
         
-        <!-- Entitlement Details Modal -->
         <div class="modal-content flex-col w-full max-w-2xl bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="entitlement-details-modal">
             <h3 id="entitlement-modal-title" class="text-xl font-bold p-4 border-b border-slate-700">تفاصيل المستحقات</h3>
             <div id="entitlement-modal-body" class="p-6"></div>
             <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button></div>
         </div>
 
-        <!-- Attendance Modal with Notes -->
         <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="attendance-modal">
              <h3 class="text-xl font-bold p-4 border-b border-slate-700">تسجيل الحضور</h3><div class="p-6 space-y-4"><label for="guard-notes" class="block">ملاحظات (اختياري)</label><textarea id="guard-notes" rows="4" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea></div>
              <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button><button id="submit-attendance-btn" class="font-semibold bg-green-600 text-white px-4 py-2 rounded-lg transition hover:bg-green-700">تأكيد الحضور</button></div>
@@ -331,6 +316,44 @@
                     return parseFloat(entitlement.toFixed(2));
                 }
             };
+
+            const getCurrentLocation = () => {
+                return new Promise((resolve, reject) => {
+                    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                        return reject(new Error('يجب استخدام اتصال آمن (HTTPS) لطلب الموقع.'));
+                    }
+                    if (!navigator.geolocation) {
+                        return reject(new Error('المتصفح لا يدعم خدمة تحديد المواقع.'));
+                    }
+                    showLoading(true);
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            showLoading(false);
+                            resolve(`${position.coords.latitude},${position.coords.longitude}`);
+                        },
+                        (error) => {
+                            showLoading(false);
+                            let message = "لا يمكن الحصول على الموقع. ";
+                            switch (error.code) {
+                                case error.PERMISSION_DENIED:
+                                    message = "لقد رفضت طلب الوصول للموقع. يرجى تمكين الصلاحية من إعدادات المتصفح والجهاز.";
+                                    break;
+                                case error.POSITION_UNAVAILABLE:
+                                    message = "معلومات الموقع غير متاحة حالياً. حاول مرة أخرى.";
+                                    break;
+                                case error.TIMEOUT:
+                                    message = "انتهت مهلة طلب تحديد الموقع. حاول مرة أخرى.";
+                                    break;
+                                default:
+                                    message = "حدث خطأ غير معروف أثناء طلب الموقع.";
+                                    break;
+                            }
+                            reject(new Error(message));
+                        },
+                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                    );
+                });
+            };
             
             const fetchAllGuards = async () => {
                 const { data, error } = await _supabase.from('guards').select('*');
@@ -404,7 +427,7 @@
                 
                 const columns = [
                     { header: 'اسم الحارس', render: r => r.guardName },
-                    { header: 'لوكيشن الحضور', render: r => r.checkin_location ? `<a href="https://www.google.com/maps?q=${r.checkin_location}" target="_blank" class="text-blue-400 hover:underline">عرض الخريطة</a>` : '-' },
+                    { header: 'لوكيشن الحضور', render: r => r.checkin_location ? `<a href="https://maps.google.com/?q=${r.checkin_location}" target="_blank" class="text-blue-400 hover:underline">عرض الخريطة</a>` : '-' },
                     { header: 'مدة العمل / الحالة', render: r => {
                         if (!r.checkout_at) {
                             let supervisorBtn = '';
@@ -415,7 +438,7 @@
                         }
                         return r.work_duration || '-';
                     }},
-                    { header: 'لوكيشن الانصراف', render: r => r.checkout_location ? `<a href="https://www.google.com/maps?q=${r.checkout_location}" target="_blank" class="text-blue-400 hover:underline">عرض الخريطة</a>` : '-' },
+                    { header: 'لوكيشن الانصراف', render: r => r.checkout_location ? `<a href="https://maps.google.com/?q=${r.checkout_location}" target="_blank" class="text-blue-400 hover:underline">عرض الخريطة</a>` : '-' },
                     { header: 'الإجراءات', render: r => {
                         const statusMap = { Approved: { text: 'معتمد', color: 'text-green-400' }, Cancelled: { text: 'ملغي', color: 'text-red-400' }};
                         const currentStatus = statusMap[r.status];
@@ -445,8 +468,7 @@
                         data = state.allGuardsData;
                         container.innerHTML = `<div class="mb-4"><button id="add-guard-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">إضافة حارس جديد</button></div>
                                               <div id="guards-filters" class="p-4 grid grid-cols-1 md:grid-cols-5 gap-4 items-end bg-slate-800/50 rounded-lg mb-4">
-                                                  <!-- Filters will be rendered here by JS -->
-                                              </div>
+                                                  </div>
                                               <div id="hr-guards-table"></div>`;
                         const guardsFiltersEl = container.querySelector('#guards-filters');
                         guardsFiltersEl.innerHTML = `<div><label for="search-name" class="block mb-2 text-sm font-medium text-gray-300">بحث بالاسم</label><input type="text" id="search-name" class="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg w-full p-2.5" placeholder="اكتب اسم الحارس..."></div>
@@ -525,8 +547,7 @@
                         });
                         
                         container.innerHTML = `<div id="salary-filters" class="p-4 grid grid-cols-1 md:grid-cols-5 gap-4 items-end bg-slate-800/50 rounded-lg mb-4">
-                            <!-- Salary filters will be rendered here by JS -->
-                        </div><div id="hr-salaries-table"></div>`;
+                            </div><div id="hr-salaries-table"></div>`;
                         const salaryFiltersEl = container.querySelector('#salary-filters');
                          salaryFiltersEl.innerHTML = `<div><label for="salary-search-name" class="block mb-2 text-sm font-medium text-gray-300">بحث بالاسم</label><input type="text" id="salary-search-name" class="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg w-full p-2.5" placeholder="اكتب اسم الحارس..."></div>
                             <div><label for="salary-filter-region" class="block mb-2 text-sm font-medium text-gray-300">المنطقة</label><select id="salary-filter-region" class="filter-select"><option value="">الكل</option>${[...new Set(state.allGuardsData.map(i => i.region).filter(Boolean))].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>
@@ -655,6 +676,8 @@
                     
                     if (button.id === 'check-in-btn') {
                         if (!button.disabled) showModal('attendance-modal');
+                    } else if (button.id === 'check-out-btn') {
+                         if (!button.disabled) dom.checkOutBtn.dispatchEvent(new Event('checkout'));
                     } else if (button.classList.contains('request')) {
                         showModal(button.dataset.modal);
                     }
@@ -677,7 +700,7 @@
                     }
                 });
                 
-                dom.checkOutBtn.addEventListener('click', async () => {
+                dom.checkOutBtn.addEventListener('checkout', async () => {
                     if (dom.checkOutBtn.disabled || !state.activeAttendanceId) return; 
                     if (!await confirmAction('تأكيد الانصراف', 'هل أنت متأكد من رغبتك في الانصراف الآن؟')) return; 
                     showLoading(true);
@@ -766,6 +789,7 @@
                     
                     if (button.classList.contains('supervisor-checkout-btn')) {
                          const guardId = button.dataset.guardId;
+                         await fetchAllGuards();
                          const {data: attendanceRecord, error: fetchError} = await _supabase.from('attendance').select('created_at, guardName').eq('id', id).single();
                          if (fetchError || !attendanceRecord) return showAlert('خطأ: لم يتم العثور على سجل الحضور.');
                          
@@ -842,7 +866,7 @@
                         assignmentsList.innerHTML = '';
 
                         if (['admin', 'operations'].includes(staff.role)) {
-                           const assignments = staff.assignments || [{}]; // Start with one row if none exist
+                           const assignments = staff.assignments && staff.assignments.length > 0 ? staff.assignments : [{}]; // Start with one row if none exist
                            assignments.forEach(assignment => addAssignmentRow(assignment));
                         }
                         
