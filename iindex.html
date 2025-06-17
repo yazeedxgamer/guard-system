@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Title and Favicon -->
+    <title>Arkanat Guard System</title>
+    <link rel="icon" type="image/svg+xml" href="https://arkanat.com.sa/wp-content/uploads/2024/07/logo.svg">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #0f172a; /* Dark background */
+        }
+        .page {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+            min-height: 100vh;
+        }
+        .page.active {
+            display: flex;
+            opacity: 1;
+        }
+        .table-container {
+            max-height: 55vh;
+            overflow-y: auto;
+        }
+        .table-container thead th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #1e293b;
+        }
+        .hr-tab {
+            @apply py-4 px-1 border-b-2 font-medium text-xs sm:text-lg transition-colors duration-200 whitespace-nowrap;
+        }
+        .hr-tab.active-tab {
+             @apply border-blue-500 text-blue-500;
+        }
+        .hr-tab:not(.active-tab) {
+             @apply border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500;
+        }
+        .action-btn {
+            @apply text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-px flex items-center justify-center gap-1;
+        }
+        .modal-content {
+            display: none;
+        }
+        .modal-content.active {
+            display: flex;
+        }
+        .filter-select {
+            @apply bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5;
+        }
+        .dashboard-action-btn {
+            @apply flex flex-col items-center justify-center gap-2 bg-slate-800 p-6 rounded-xl shadow-lg text-center text-lg font-bold text-gray-200 border border-slate-700 hover:shadow-xl hover:bg-slate-700 hover:-translate-y-1 transition-all duration-300;
+        }
+        .dashboard-action-btn.check-in { @apply hover:border-green-500; }
+        .dashboard-action-btn.check-out { @apply hover:border-red-500; }
+        .dashboard-action-btn.request { @apply hover:border-blue-500; }
+        .dashboard-action-btn:disabled {
+            @apply bg-slate-800/50 text-gray-500 border-slate-800 cursor-not-allowed hover:translate-y-0 hover:shadow-lg;
+        }
+        .on-duty-status {
+            @apply flex items-center gap-2 text-green-400 font-bold animate-pulse;
+        }
+        .on-leave-status {
+            @apply flex items-center gap-2 text-blue-400 font-bold;
+        }
+    </style>
+</head>
+<body class="bg-slate-900">
+
+    <!-- =========== New Landing Page =========== -->
+    <div id="landing-page" class="page active flex-col justify-center items-center p-4 sm:p-8">
+        <div class="w-full max-w-4xl text-center">
+            <img src="https://arkanat.com.sa/wp-content/uploads/2024/07/logo.svg" alt="شعار اركانات" class="h-20 sm:h-24 mb-6 mx-auto" onerror="this.onerror=null; this.src='https://placehold.co/200x70/FFFFFF/000000?text=Arkanat';">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4 text-white">نظام ادارة الحراسات الالكتروني</h1>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
+                 <div class="login-option-card" data-role="guard"><i class="ph-fill ph-user text-blue-400 text-5xl"></i><h3 class="text-xl font-bold mt-4 text-white">دخول الحارس</h3><p class="text-gray-400 text-sm mt-1">تسجيل الحضور وتقديم الطلبات</p></div>
+                 <div class="login-option-card" data-role="admin"><i class="ph-fill ph-shield-check text-green-400 text-5xl"></i><h3 class="text-xl font-bold mt-4 text-white">دخول المشرف</h3></div>
+                 <div class="login-option-card" data-role="operations"><i class="ph-fill ph-chart-line-up text-indigo-400 text-5xl"></i><h3 class="text-xl font-bold mt-4 text-white">إدارة العمليات</h3></div>
+                 <div class="login-option-card" data-role="hr"><i class="ph-fill ph-users-three text-orange-400 text-5xl"></i><h3 class="text-xl font-bold mt-4 text-white">الموارد البشرية</h3></div>
+            </div>
+        </div>
+    </div>
+    <style>.login-option-card { @apply bg-slate-800 p-8 rounded-2xl shadow-lg cursor-pointer transition-all duration-300 hover:shadow-blue-500/20 hover:-translate-y-2 border border-slate-700 hover:border-blue-500; }</style>
+
+    <!-- =========== Unified Login Page =========== -->
+    <div id="login-page" class="page justify-center items-center bg-slate-900 p-4">
+        <div class="w-full max-w-md bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl p-8 space-y-6">
+            <div class="text-center"><h2 id="login-title" class="text-3xl font-bold text-white">تسجيل الدخول</h2></div>
+            <div><label for="login-id" class="block text-sm font-medium text-gray-300 mb-2">اسم المستخدم</label><input type="text" id="login-id" class="w-full p-3 bg-slate-700 text-white border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 transition"></div>
+            <div><label for="login-password" class="block text-sm font-medium text-gray-300 mb-2">كلمة المرور</label><input type="password" id="login-password" class="w-full p-3 bg-slate-700 text-white border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 transition"></div>
+            <button id="login-btn" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-blue-700 transition">دخول</button>
+            <button id="login-back-btn" class="w-full bg-slate-700 text-gray-300 p-3 rounded-lg font-bold hover:bg-slate-600 transition">رجوع</button>
+        </div>
+    </div>
+    
+    <!-- =========== Guard Dashboard Page =========== -->
+    <div id="guard-dashboard-page" class="page flex-col justify-center items-center bg-slate-900 p-4">
+        <div class="w-full max-w-4xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl">
+             <div class="p-6 border-b border-slate-700 flex justify-between items-center"><h2 class="text-2xl font-bold text-white">مرحباً بك، <span id="guard-name-display"></span></h2><button class="logout-btn text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">تسجيل الخروج</button></div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <button id="check-in-btn" class="dashboard-action-btn check-in" data-modal="attendance-modal"><i class="ph-fill ph-fingerprint text-green-400 text-4xl"></i>تسجيل حضور</button>
+                <button id="check-out-btn" class="dashboard-action-btn check-out"><i class="ph-fill ph-sign-out text-red-400 text-4xl"></i>تسجيل خروج</button>
+                <button class="dashboard-action-btn request" data-modal="leave-modal"><i class="ph-fill ph-calendar-plus text-blue-400 text-4xl"></i>طلب إجازة</button>
+                <button class="dashboard-action-btn request" data-modal="loan-modal"><i class="ph-fill ph-money text-yellow-400 text-4xl"></i>طلب سلفة</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========== Admin/Ops Dashboard Page =========== -->
+    <div id="admin-dashboard-page" class="page flex-col items-center bg-slate-900 p-4 sm:p-6 md:p-8 w-full">
+         <div class="w-full max-w-7xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl">
+            <div class="p-4 sm:p-6 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <h2 id="admin-dashboard-title" class="text-2xl font-bold text-white">لوحة التحكم</h2>
+                <div class="flex items-center gap-3"><button id="export-csv-btn" class="text-white font-semibold bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition">تصدير إلى CSV</button><button class="logout-btn text-white font-semibold bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition">تسجيل الخروج</button></div>
+            </div>
+            <div id="admin-table-container" class="table-container p-4"></div>
+        </div>
+    </div>
+    
+    <!-- =========== HR Dashboard Page =========== -->
+    <div id="hr-dashboard-page" class="page flex-col items-center bg-slate-900 p-4 sm:p-6 md:p-8 w-full">
+        <div class="w-full max-w-7xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl">
+            <div class="p-4 sm:p-6 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4"><h2 class="text-2xl font-bold text-white">لوحة تحكم الموارد البشرية</h2><button class="logout-btn text-white font-semibold bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition">تسجيل الخروج</button></div>
+            <div class="border-b border-slate-700"><nav id="hr-tabs" class="flex space-x-2 sm:space-x-4 px-2 sm:px-6 overflow-x-auto"></nav></div>
+            <div id="hr-tab-content" class="p-4"></div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-container" class="hidden fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4 overflow-y-auto">
+        <!-- Add/Edit Guard Modal -->
+        <div class="modal-content flex-col w-full max-w-3xl bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="guard-form-modal">
+            <h3 id="guard-form-title" class="text-xl font-bold p-4 border-b border-slate-700"></h3>
+            <div class="p-6 space-y-6">
+                <input type="hidden" id="guard-form-id">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <input id="guard-form-name" type="text" placeholder="اسم الحارس الكامل" class="p-2 border bg-slate-700 border-slate-600 rounded-md md:col-span-3">
+                    <input id="guard-form-national-id" type="text" placeholder="رقم الهوية" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                    <input id="guard-form-mobile" type="text" placeholder="رقم الجوال" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                    <input id="guard-form-password" type="text" placeholder="كلمة المرور (اتركه فارغاً لعدم التغيير)" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                    <input id="guard-form-title" type="text" placeholder="المسمى الوظيفي" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                    <input id="guard-form-location" type="text" placeholder="الموقع" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                    <input id="guard-form-region" type="text" placeholder="المنطقة" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                    <input id="guard-form-project" type="text" placeholder="المشروع" class="p-2 border bg-slate-700 border-slate-600 rounded-md md:col-span-3">
+                    <input id="guard-form-basic-salary" type="number" placeholder="راتب اساسي" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                    <input id="guard-form-housing-allowance" type="number" placeholder="بدل سكن" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                    <input id="guard-form-transport-allowance" type="number" placeholder="بدل نقل" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                    <input id="guard-form-other-allowances" type="number" placeholder="بدلات اخرى" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                </div>
+                <fieldset class="border border-slate-600 p-4 rounded-lg">
+                    <legend class="px-2 font-semibold text-gray-300">جدول الدوام الأسبوعي</legend>
+                    <div id="guard-form-schedule-container" class="space-y-2"></div>
+                </fieldset>
+            </div>
+            <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button><button id="submit-guard-form-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">حفظ</button></div>
+        </div>
+
+        <!-- Add/Edit Staff Modal -->
+        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="staff-form-modal">
+            <h3 id="staff-form-title" class="text-xl font-bold p-4 border-b border-slate-700"></h3>
+            <input type="hidden" id="staff-form-id">
+            <input type="hidden" id="staff-form-role">
+            <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input id="staff-form-name" type="text" placeholder="الاسم الكامل" class="p-2 border bg-slate-700 border-slate-600 rounded-md sm:col-span-2">
+                <input id="staff-form-username" type="text" placeholder="اسم المستخدم" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                <input id="staff-form-password" type="text" placeholder="كلمة المرور (اتركه فارغاً)" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                <div id="staff-form-title-container" class="sm:col-span-2">
+                    <label for="staff-form-title-input" class="block text-sm font-medium text-gray-300 mb-2">المسمى الوظيفي</label>
+                    <input id="staff-form-title-input" type="text" placeholder="المسمى الوظيفي" class="p-2 w-full border bg-slate-700 border-slate-600 rounded-md">
+                </div>
+                <div id="staff-form-assignment-container" class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                     <div><label for="staff-form-region" class="block text-xs font-medium text-gray-300 mb-1">المنطقة</label><select id="staff-form-region" class="filter-select"></select></div>
+                     <div><label for="staff-form-location" class="block text-xs font-medium text-gray-300 mb-1">الموقع</label><select id="staff-form-location" class="filter-select"></select></div>
+                     <div><label for="staff-form-project" class="block text-xs font-medium text-gray-300 mb-1">المشروع</label><select id="staff-form-project" class="filter-select"></select></div>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-900 flex justify-end gap-3">
+                <button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button>
+                <button id="submit-staff-form-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">حفظ</button>
+            </div>
+        </div>
+        
+         <!-- Financial Transaction Modal -->
+        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="financial-transaction-modal">
+            <h3 id="financial-transaction-title" class="text-xl font-bold p-4 border-b border-slate-700"></h3>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="financial-transaction-guard-id">
+                 <input type="hidden" id="financial-transaction-type">
+                <div>
+                    <label for="financial-transaction-amount" class="block text-sm font-medium text-gray-300 mb-2">المبلغ</label>
+                    <input id="financial-transaction-amount" type="number" placeholder="ادخل المبلغ" class="p-2 w-full border bg-slate-700 border-slate-600 rounded-md">
+                </div>
+                 <div>
+                    <label for="financial-transaction-reason" class="block text-sm font-medium text-gray-300 mb-2">السبب</label>
+                    <textarea id="financial-transaction-reason" rows="3" placeholder="ادخل سبب الإجراء" class="p-2 w-full border bg-slate-700 border-slate-600 rounded-md"></textarea>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-900 flex justify-end gap-3">
+                <button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button>
+                <button id="submit-financial-transaction-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">تأكيد</button>
+            </div>
+        </div>
+
+        <!-- Schedule Display Modal -->
+        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="schedule-display-modal">
+            <h3 id="schedule-modal-title" class="text-xl font-bold p-4 border-b border-slate-700">جدول الدوام</h3>
+            <div id="schedule-modal-body" class="p-6"></div>
+            <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button></div>
+        </div>
+        
+        <!-- Entitlement Details Modal -->
+        <div class="modal-content flex-col w-full max-w-2xl bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="entitlement-details-modal">
+            <h3 id="entitlement-modal-title" class="text-xl font-bold p-4 border-b border-slate-700">تفاصيل المستحقات</h3>
+            <div id="entitlement-modal-body" class="p-6"></div>
+            <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button></div>
+        </div>
+
+        <!-- Other Modals -->
+        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="attendance-modal">
+             <h3 class="text-xl font-bold p-4 border-b border-slate-700">تسجيل الحضور</h3><div class="p-6 space-y-4"><label for="guard-notes" class="block">ملاحظات (اختياري)</label><textarea id="guard-notes" rows="4" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea></div>
+             <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button><button id="submit-attendance-btn" class="font-semibold bg-green-600 text-white px-4 py-2 rounded-lg transition hover:bg-green-700">تأكيد الحضور</button></div>
+        </div>
+        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="leave-modal">
+             <h3 class="text-xl font-bold p-4 border-b border-slate-700">طلب إجازة</h3><div class="p-6 space-y-4"><label for="leave-days" class="block">عدد الأيام المطلوبة</label><input type="number" id="leave-days" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md" min="1"><label for="leave-reason" class="block">السبب</label><textarea id="leave-reason" rows="3" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea></div>
+             <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button><button id="submit-leave-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">إرسال الطلب</button></div>
+        </div>
+        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="loan-modal">
+             <h3 class="text-xl font-bold p-4 border-b border-slate-700">طلب سلفة</h3><div class="p-6 space-y-4"><label for="loan-amount" class="block">المبلغ المطلوب</label><input type="number" id="loan-amount" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md" min="1"><label for="loan-reason" class="block">السبب</label><textarea id="loan-reason" rows="3" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea></div>
+             <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button><button id="submit-loan-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">إرسال الطلب</button></div>
+        </div>
+        <div class="modal-content flex-col w-full max-w-sm bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="confirm-modal">
+            <h3 id="confirm-title" class="text-xl font-bold p-4">تأكيد الإجراء</h3><p id="confirm-message" class="p-6 text-lg"></p><div class="p-4 bg-slate-900 flex justify-end gap-3"><button id="confirm-cancel-btn" class="font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">لا</button><button id="confirm-ok-btn" class="font-semibold bg-red-600 text-white px-4 py-2 rounded-lg transition hover:bg-red-700">نعم</button></div>
+        </div>
+    </div>
+    
+    <div id="alert-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4"><div class="bg-slate-800 border border-slate-600 rounded-lg shadow-xl p-6 text-center w-full max-w-sm"><p id="alert-message" class="text-lg mb-6 text-white"></p><button id="alert-close-btn" class="bg-blue-600 text-white px-8 py-2 rounded-lg hover:bg-blue-700">موافق</button></div></div>
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"><div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-white"></div></div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const runApp = async () => {
+            // --- IMPORTANT: DATABASE SETUP ---
+            // 'guards' table: mobile_number (text), weekly_schedule (jsonb), transport_allowance (numeric)
+            // 'attendance' table: checkout_at (timestamptz), work_duration (text), daily_entitlement (numeric)
+            // 'staff' table: id(pk, auto), name(text), username(text, unique), password(text), role(text), job_title(text, nullable), region, location, project
+            // NEW TABLE 'financial_transactions': id, guard_id, type, amount, reason, created_by, created_at
+            // ---------------------------------
+            const SUPABASE_URL = 'https://tlgyxbdjdhdjgkcndxoi.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZ3l4YmRqZGhkamdrY25keG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwOTU4NzMsImV4cCI6MjA2NTY3MTg3M30.fX6ek2_xIdSzu_71cmsXWweZXP6cSeFlv8NTlVFKzZg';
+            const { createClient } = supabase;
+            const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+            let state = { currentGuard: null, currentUser: null, currentRole: null, allGuardsData: [], allStaffData: [], activeAttendanceId: null, allLeaveRequests: [] };
+            const dom = {
+                pages: document.querySelectorAll('.page'), loading: document.getElementById('loading-overlay'), alertModal: document.getElementById('alert-modal'), alertMessage: document.getElementById('alert-message'), modalContainer: document.getElementById('modal-container'), modalContents: document.querySelectorAll('.modal-content'), loginTitle: document.getElementById('login-title'), guardNameDisplay: document.getElementById('guard-name-display'), adminDashboardTitle: document.getElementById('admin-dashboard-title'), adminTableContainer: document.getElementById('admin-table-container'), hrTabs: document.getElementById('hr-tabs'), hrTabContent: document.getElementById('hr-tab-content'), checkInBtn: document.getElementById('check-in-btn'), checkOutBtn: document.getElementById('check-out-btn'),
+                scheduleModal: { title: document.getElementById('schedule-modal-title'), body: document.getElementById('schedule-modal-body') },
+                entitlementModal: { title: document.getElementById('entitlement-modal-title'), body: document.getElementById('entitlement-modal-body') },
+                confirmModal: { title: document.getElementById('confirm-title'), message: document.getElementById('confirm-message'), okBtn: document.getElementById('confirm-ok-btn'), cancelBtn: document.getElementById('confirm-cancel-btn') }
+            };
+
+            const showPage = (pageId) => { dom.pages.forEach(p => p.classList.remove('active')); document.getElementById(pageId)?.classList.add('active'); };
+            const showLoading = (isLoading) => dom.loading.style.display = isLoading ? 'flex' : 'none';
+            const showAlert = (message) => { dom.alertMessage.textContent = message; dom.alertModal.style.display = 'flex'; };
+            const showModal = (modalId) => { dom.modalContainer.style.display = 'flex'; dom.modalContents.forEach(m => m.classList.remove('active')); document.getElementById(modalId)?.classList.add('active'); };
+            const closeModal = () => { dom.modalContainer.style.display = 'none'; dom.alertModal.style.display = 'none'; };
+            const confirmAction = (title, message) => { return new Promise((resolve) => { dom.confirmModal.title.textContent = title; dom.confirmModal.message.textContent = message; showModal('confirm-modal'); dom.confirmModal.okBtn.onclick = () => { closeModal(); resolve(true); }; dom.confirmModal.cancelBtn.onclick = () => { closeModal(); resolve(false); }; }); };
+            const logActivity = async (actor, action, details = '') => { await _supabase.from('activity_log').insert({ actor, action, details }); };
+            const formatDuration = (ms) => { if (ms < 0) ms = 0; const s = Math.floor(ms / 1000); const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`; };
+            const parseDuration = (durationStr) => {
+                if (!durationStr || typeof durationStr !== 'string') return 0;
+                const parts = durationStr.split(':');
+                if (parts.length !== 3) return 0;
+                const [hours, minutes, seconds] = parts.map(Number);
+                return (hours * 3600 + minutes * 60 + seconds) * 1000;
+            };
+
+            const calculateEntitlement = (guardId, workDurationMs) => {
+                const guard = state.allGuardsData.find(g => g.id.toString() === guardId.toString());
+                if (!guard) return 0;
+                const totalSalary = (guard.basic_salary || 0) + (guard.housing_allowance || 0) + (guard.transport_allowance || 0) + (guard.other_allowances || 0);
+                if (totalSalary === 0) return 0;
+                const dailyRate = totalSalary / 30;
+                const hourlyRate = dailyRate / 8; // Standard 8-hour day
+                const workHours = workDurationMs / (1000 * 60 * 60);
+                if (workHours >= 8) {
+                    return parseFloat(dailyRate.toFixed(2));
+                } else {
+                    const entitlement = workHours * hourlyRate;
+                    return parseFloat(entitlement.toFixed(2));
+                }
+            };
+            
+            const fetchAllGuards = async () => {
+                const { data, error } = await _supabase.from('guards').select('*');
+                if (error) { console.error("Failed to fetch guards data:", error); showAlert("فشل تحميل بيانات الحراس."); return; }
+                state.allGuardsData = data;
+            };
+             const fetchAllLeaveRequests = async () => {
+                const { data, error } = await _supabase.from('leave_requests').select('*').eq('status', 'Approved');
+                if (error) { console.error("Failed to fetch leave requests:", error); return; }
+                state.allLeaveRequests = data;
+            };
+
+            const getGuardStatus = (guardId) => {
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                const activeLeave = state.allLeaveRequests.find(leave => {
+                    const startDate = new Date(leave.created_at);
+                    const endDate = new Date(startDate);
+                    endDate.setDate(startDate.getDate() + leave.days_requested);
+                    return leave.guardId === guardId && today >= startDate && today <= endDate;
+                });
+                
+                if (activeLeave) {
+                    const endDate = new Date(new Date(activeLeave.created_at).setDate(new Date(activeLeave.created_at).getDate() + activeLeave.days_requested));
+                    const remainingDays = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+                    return { onLeave: true, totalDays: activeLeave.days_requested, remainingDays: remainingDays > 0 ? remainingDays : 0 };
+                }
+                return { onLeave: false };
+            }
+
+
+            const updateGuardButtonState = async (guardId) => {
+                const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0); const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
+                const { data, error } = await _supabase.from('attendance').select('id, checkout_at').eq('guardId', guardId).gte('created_at', todayStart.toISOString()).lte('created_at', todayEnd.toISOString()).is('checkout_at', null).order('created_at', { ascending: false }).limit(1);
+                if (error || !data || data.length === 0) { dom.checkInBtn.disabled = false; dom.checkOutBtn.disabled = true; state.activeAttendanceId = null; }
+                else { dom.checkInBtn.disabled = true; dom.checkOutBtn.disabled = false; state.activeAttendanceId = data[0].id; }
+            };
+
+            const renderTable = (container, columns, data) => {
+                if (!container) return;
+                let tableHTML = `<table class="w-full text-right text-sm text-gray-300">
+                    <thead class="bg-slate-700 text-xs uppercase"><tr>`;
+                columns.forEach(col => tableHTML += `<th class="p-3 font-bold text-gray-300">${col.header}</th>`);
+                tableHTML += `</tr></thead><tbody class="divide-y divide-slate-700">`;
+                if (!data || data.length === 0) { tableHTML += `<tr><td colspan="${columns.length}" class="text-center p-8 text-gray-400">لا توجد بيانات لعرضها.</td></tr>`; }
+                else { data.forEach(row => { let rowClass = row.status === 'Approved' ? 'bg-green-500/10' : (row.status === 'Rejected' || row.status === 'Cancelled' ? 'bg-red-500/10' : ''); tableHTML += `<tr id="row-${row.id}" class="${rowClass} hover:bg-slate-700/50 transition-colors duration-300">`; columns.forEach(col => { tableHTML += `<td class="p-3 break-words align-middle">${col.render(row)}</td>`; }); tableHTML += `</tr>`; }); }
+                tableHTML += `</tbody></table>`; container.innerHTML = tableHTML;
+            };
+            
+            const loadAdminDashboard = async () => {
+                showPage('admin-dashboard-page');
+                dom.adminDashboardTitle.textContent = {admin: 'لوحة تحكم المشرف', operations: 'لوحة تحكم العمليات'}[state.currentRole];
+                showLoading(true);
+                await fetchAllGuards();
+                let { data, error } = await _supabase.from('attendance').select('*').order('created_at', { ascending: false });
+                
+                // Filter attendance records if the user is a supervisor with specific assignments
+                if (state.currentRole === 'admin' && state.currentUser.name !== 'Super Admin' && (state.currentUser.region || state.currentUser.location || state.currentUser.project)) {
+                    const supervisedGuardIds = state.allGuardsData.filter(g => 
+                        (!state.currentUser.region || g.region === state.currentUser.region) &&
+                        (!state.currentUser.location || g.location === state.currentUser.location) &&
+                        (!state.currentUser.project || g.project === state.currentUser.project)
+                    ).map(g => g.id);
+                    data = data.filter(att => supervisedGuardIds.includes(att.guardId));
+                }
+
+                showLoading(false);
+                if(error) return showAlert('فشل تحميل السجلات.');
+                
+                const columns = [
+                    { header: 'اسم الحارس', render: r => r.guardName },
+                    { header: 'وقت الحضور', render: r => new Date(r.created_at).toLocaleString('ar-SA') },
+                    { header: 'مدة العمل / الحالة', render: r => {
+                        if (!r.checkout_at) {
+                            let supervisorBtn = '';
+                            if (['admin', 'operations'].includes(state.currentRole)) {
+                                supervisorBtn = `<button class="action-btn bg-yellow-600 hover:bg-yellow-700 supervisor-checkout-btn" data-attendance-id="${r.id}" data-guard-id="${r.guardId}"><i class="ph ph-sign-out"></i> خروج</button>`;
+                            }
+                            return `<div class="flex items-center gap-2"><span class="on-duty-status">في موقع العمل الآن</span> ${supervisorBtn}</div>`;
+                        }
+                        return r.work_duration || '-';
+                    }},
+                    { header: 'المستحق اليومي', render: r => r.daily_entitlement ? `${r.daily_entitlement.toFixed(2)} ريال` : '-' },
+                    { header: 'الإجراءات', render: r => {
+                        const statusMap = { Approved: { text: 'معتمد', color: 'text-green-400' }, Cancelled: { text: 'ملغي', color: 'text-red-400' }};
+                        const currentStatus = statusMap[r.status];
+                        if (currentStatus) { 
+                            const button = state.currentRole === 'operations' ? `<button class="action-btn bg-orange-600 hover:bg-orange-700 modify-btn" data-id="${r.id}" data-guard-name="${r.guardName}" data-old-status="${currentStatus.text}"><i class="ph ph-pencil-simple"></i> تعديل</button>` : ''; 
+                            return `<div class="flex items-center gap-2"><span class="${currentStatus.color} font-bold">${currentStatus.text}</span> ${button}</div>`; 
+                        }
+                        return `<div class="flex gap-2">
+                                    <button class="action-btn bg-green-600 hover:bg-green-700 approve-btn" data-id="${r.id}" data-guard-name="${r.guardName}"><i class="ph ph-check-circle"></i> اعتماد</button>
+                                    <button class="action-btn bg-red-600 hover:bg-red-700 cancel-btn" data-id="${r.id}" data-guard-name="${r.guardName}"><i class="ph ph-x-circle"></i> إلغاء</button>
+                                </div>`;
+                    }}
+                ];
+                renderTable(dom.adminTableContainer, columns, data);
+            };
+
+            const loadHrDashboard = async (tab = 'guards') => {
+                showPage('hr-dashboard-page'); showLoading(true);
+                dom.hrTabs.querySelectorAll('.hr-tab').forEach(t => t.classList.remove('active-tab'));
+                dom.hrTabs.querySelector(`.hr-tab[data-tab="${tab}"]`)?.classList.add('active-tab');
+                let columns, data, error, container = dom.hrTabContent; container.innerHTML = '';
+                await fetchAllGuards();
+                await fetchAllLeaveRequests();
+                
+                switch(tab) {
+                    case 'guards':
+                        data = state.allGuardsData;
+                        container.innerHTML = `<div class="mb-4"><button id="add-guard-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">إضافة حارس جديد</button></div>
+                                              <div id="guards-filters" class="p-4 grid grid-cols-1 md:grid-cols-5 gap-4 items-end bg-slate-800/50 rounded-lg mb-4">
+                                                  <!-- Filters will be rendered here by JS -->
+                                              </div>
+                                              <div id="hr-guards-table"></div>`;
+                        const guardsFiltersEl = container.querySelector('#guards-filters');
+                        guardsFiltersEl.innerHTML = `<div><label for="search-name" class="block mb-2 text-sm font-medium text-gray-300">بحث بالاسم</label><input type="text" id="search-name" class="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg w-full p-2.5" placeholder="اكتب اسم الحارس..."></div>
+                            <div><label for="filter-region" class="block mb-2 text-sm font-medium text-gray-300">المنطقة</label><select id="filter-region" class="filter-select"><option value="">الكل</option>${[...new Set(data.map(i => i.region).filter(Boolean))].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>
+                            <div><label for="filter-location" class="block mb-2 text-sm font-medium text-gray-300">الموقع</label><select id="filter-location" class="filter-select"><option value="">الكل</option>${[...new Set(data.map(i => i.location).filter(Boolean))].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>
+                            <div><label for="filter-project" class="block mb-2 text-sm font-medium text-gray-300">المشروع</label><select id="filter-project" class="filter-select"><option value="">الكل</option>${[...new Set(data.map(i => i.project).filter(Boolean))].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>
+                            <button id="reset-filters-btn" class="w-full font-semibold bg-slate-600 text-white px-4 py-2.5 rounded-lg transition hover:bg-slate-500">إعادة تعيين</button>`;
+                        
+                        const renderFilteredGuards = () => {
+                           const nameFilter = container.querySelector('#search-name').value.toLowerCase();
+                           const regionFilter = container.querySelector('#filter-region').value; 
+                           const locationFilter = container.querySelector('#filter-location').value; 
+                           const projectFilter = container.querySelector('#filter-project').value;
+                           const filteredData = state.allGuardsData.filter(g => (!nameFilter || g.name.toLowerCase().includes(nameFilter)) && (!regionFilter || g.region === regionFilter) && (!locationFilter || g.location === locationFilter) && (!projectFilter || g.project === projectFilter));
+                           columns = [ 
+                               { header: 'الاسم', render: r => r.name }, 
+                               { header: 'رقم الهوية', render: r => r.id }, 
+                               { header: 'الحالة', render: r => {
+                                   const status = getGuardStatus(r.id);
+                                   if (status.onLeave) {
+                                       return `<div class="on-leave-status" title="إجمالي الإجازة: ${status.totalDays} أيام"><i class="ph ph-airplane-takeoff"></i> إجازة (${status.remainingDays} يوم متبقي)</div>`;
+                                   }
+                                   return `<span class="text-gray-400">متاح</span>`;
+                               }},
+                               { header: 'الإجراءات', render: r => `<div class="flex gap-2">
+                                   <button class="action-btn bg-yellow-500 hover:bg-yellow-600 edit-guard-btn" data-guard-id="${r.id}"><i class="ph ph-pencil-simple"></i> تعديل</button>
+                                   <button class="action-btn bg-indigo-500 hover:bg-indigo-600 view-schedule-btn" data-guard-id="${r.id}"><i class="ph ph-calendar"></i> عرض</button>
+                                   <button class="action-btn bg-red-600 hover:bg-red-700 delete-guard-btn" data-guard-id="${r.id}" data-guard-name="${r.name}"><i class="ph ph-trash"></i> حذف</button>
+                                   </div>` 
+                               }];
+                           renderTable(container.querySelector('#hr-guards-table'), columns, filteredData);
+                        };
+                        renderFilteredGuards();
+                        guardsFiltersEl.addEventListener('input', renderFilteredGuards);
+                        guardsFiltersEl.querySelector('#reset-filters-btn').addEventListener('click', () => {
+                            guardsFiltersEl.querySelector('#search-name').value = ''; guardsFiltersEl.querySelector('#filter-region').value = ''; guardsFiltersEl.querySelector('#filter-location').value = ''; guardsFiltersEl.querySelector('#filter-project').value = '';
+                            renderFilteredGuards();
+                        });
+                        break;
+                    case 'salaries':
+                        const [attRes, finRes] = await Promise.all([
+                             _supabase.from('attendance').select('*'),
+                             _supabase.from('financial_transactions').select('*')
+                        ]);
+                        if (attRes.error || finRes.error) { showLoading(false); return showAlert('فشل تحميل البيانات المالية.'); }
+                        const attendanceRecords = attRes.data;
+                        const financialTransactions = finRes.data;
+
+                        const salaryData = state.allGuardsData.map(guard => {
+                            const guardAttendance = attendanceRecords.filter(r => r.guardId === guard.id && r.work_duration);
+                            const guardTransactions = financialTransactions.filter(t => t.guard_id === guard.id);
+                             const baseSalary = (guard.basic_salary || 0) + (guard.housing_allowance || 0) + (guard.transport_allowance || 0) + (guard.other_allowances || 0);
+                            const dailyRate = baseSalary / 30;
+
+                            let totalMs = 0;
+                            let totalDeductionFromHours = 0;
+                            guardAttendance.forEach(att => {
+                                const workMs = parseDuration(att.work_duration);
+                                totalMs += workMs;
+                                const workHours = workMs / (1000 * 60 * 60);
+                                if (workHours < 8) {
+                                    const entitlement = calculateEntitlement(guard.id, workMs);
+                                    const deductionForDay = dailyRate - entitlement;
+                                    totalDeductionFromHours += deductionForDay > 0 ? deductionForDay : 0;
+                                }
+                            });
+
+                            const totalDaysWorked = new Set(guardAttendance.map(r => new Date(r.created_at).toLocaleDateString())).size;
+                            const requiredHours = totalDaysWorked * 8;
+                            
+                            const totalManualDeductions = guardTransactions.filter(t => t.type === 'deduction').reduce((acc, curr) => acc + curr.amount, 0);
+                            const totalAdditions = guardTransactions.filter(t => t.type === 'addition').reduce((acc, curr) => acc + curr.amount, 0);
+                            const netSalary = baseSalary - totalDeductionFromHours - totalManualDeductions + totalAdditions;
+
+                            return { ...guard, totalDaysWorked, totalHoursWorked: formatDuration(totalMs), requiredHours, totalDeductionFromHours, netSalary };
+                        });
+                        
+                        container.innerHTML = `<div id="salary-filters" class="p-4 grid grid-cols-1 md:grid-cols-5 gap-4 items-end bg-slate-800/50 rounded-lg mb-4">
+                            <!-- Salary filters will be rendered here by JS -->
+                        </div><div id="hr-salaries-table"></div>`;
+                        const salaryFiltersEl = container.querySelector('#salary-filters');
+                         salaryFiltersEl.innerHTML = `<div><label for="salary-search-name" class="block mb-2 text-sm font-medium text-gray-300">بحث بالاسم</label><input type="text" id="salary-search-name" class="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg w-full p-2.5" placeholder="اكتب اسم الحارس..."></div>
+                            <div><label for="salary-filter-region" class="block mb-2 text-sm font-medium text-gray-300">المنطقة</label><select id="salary-filter-region" class="filter-select"><option value="">الكل</option>${[...new Set(state.allGuardsData.map(i => i.region).filter(Boolean))].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>
+                            <div><label for="salary-filter-location" class="block mb-2 text-sm font-medium text-gray-300">الموقع</label><select id="salary-filter-location" class="filter-select"><option value="">الكل</option>${[...new Set(state.allGuardsData.map(i => i.location).filter(Boolean))].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>
+                            <div><label for="salary-filter-project" class="block mb-2 text-sm font-medium text-gray-300">المشروع</label><select id="salary-filter-project" class="filter-select"><option value="">الكل</option>${[...new Set(state.allGuardsData.map(i => i.project).filter(Boolean))].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>
+                            <button id="salary-reset-filters-btn" class="w-full font-semibold bg-slate-600 text-white px-4 py-2.5 rounded-lg transition hover:bg-slate-500">إعادة تعيين</button>`;
+
+
+                        const renderFilteredSalaries = () => {
+                            const nameFilter = container.querySelector('#salary-search-name').value.toLowerCase();
+                            const regionFilter = container.querySelector('#salary-filter-region').value;
+                            const locationFilter = container.querySelector('#salary-filter-location').value;
+                            const projectFilter = container.querySelector('#salary-filter-project').value;
+                            
+                            const filteredData = salaryData.filter(g => (!nameFilter || g.name.toLowerCase().includes(nameFilter)) && (!regionFilter || g.region === regionFilter) && (!locationFilter || g.location === locationFilter) && (!projectFilter || g.project === projectFilter));
+
+                            columns = [
+                                { header: 'اسم الحارس', render: r => r.name },
+                                { header: 'أيام العمل', render: r => r.totalDaysWorked },
+                                { header: 'ساعات العمل', render: r => r.totalHoursWorked },
+                                { header: 'خصم الساعات', render: r => `<span class="text-red-400">${r.totalDeductionFromHours.toFixed(2)} ريال</span>` },
+                                { header: 'إجمالي الراتب', render: r => `${r.netSalary.toFixed(2)} ريال` },
+                                { header: 'إجراءات', render: r => `<div class="flex gap-2">
+                                    <button class="action-btn bg-red-500 hover:bg-red-600 financial-btn" data-guard-id="${r.id}" data-type="deduction"><i class="ph ph-minus-circle"></i> خصم</button>
+                                    <button class="action-btn bg-green-500 hover:bg-green-600 financial-btn" data-guard-id="${r.id}" data-type="addition"><i class="ph ph-plus-circle"></i> زيادة</button>
+                                    </div>` 
+                                }
+                            ];
+                            renderTable(container.querySelector('#hr-salaries-table'), columns, filteredData);
+                        };
+
+                        renderFilteredSalaries();
+                        if (salaryFiltersEl) {
+                             salaryFiltersEl.addEventListener('input', renderFilteredSalaries);
+                             salaryFiltersEl.querySelector('#salary-reset-filters-btn').addEventListener('click', () => {
+                                salaryFiltersEl.querySelector('#salary-search-name').value = '';
+                                salaryFiltersEl.querySelector('#salary-filter-region').value = '';
+                                salaryFiltersEl.querySelector('#salary-filter-location').value = '';
+                                salaryFiltersEl.querySelector('#salary-filter-project').value = '';
+                                renderFilteredSalaries();
+                             });
+                        }
+                        break;
+                    case 'hr_staff':
+                    case 'supervisors':
+                    case 'operations':
+                        const rolesMap = { hr_staff: 'hr', supervisors: 'admin', operations: 'operations' };
+                        const roleNamesMap = { hr_staff: 'موظف موارد بشرية', supervisors: 'مشرف', operations: 'موظف عمليات' };
+                        const role = rolesMap[tab];
+                        const roleName = roleNamesMap[tab];
+                        ({data, error} = await _supabase.from('staff').select('*').eq('role', role));
+                        container.innerHTML = `<div class="mb-4"><button id="add-staff-btn" data-role="${role}" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">إضافة ${roleName} جديد</button></div><div id="hr-staff-table"></div>`;
+                        columns = [ { header: 'الاسم', render: r => r.name }, { header: 'المسمى الوظيفي', render: r => r.job_title || '-' }, { header: 'اسم المستخدم', render: r => r.username }, { header: 'الإجراءات', render: r => `<div class="flex gap-2"><button class="action-btn bg-yellow-500 hover:bg-yellow-600 edit-staff-btn" data-staff-id="${r.id}"><i class="ph ph-pencil-simple"></i> تعديل</button><button class="action-btn bg-red-600 hover:bg-red-700 delete-staff-btn" data-staff-id="${r.id}" data-staff-name="${r.name}"><i class="ph ph-trash"></i> حذف</button></div>` }];
+                        renderTable(container.querySelector('#hr-staff-table'), columns, data);
+                        break;
+                    case 'attendance':
+                         ({ data, error } = await _supabase.from('attendance').select('*').order('created_at', { ascending: false }));
+                         columns = [ { header: 'اسم الحارس', render: r => r.guardName }, { header: 'وقت الحضور', render: r => new Date(r.created_at).toLocaleString('ar-SA') }, { header: 'وقت الخروج', render: r => r.checkout_at ? new Date(r.checkout_at).toLocaleString('ar-SA') : '-' }, { header: 'المستحق', render: r => r.daily_entitlement ? `${r.daily_entitlement.toFixed(2)} ريال` : '-' }, { header: 'الإجراءات', render: r => `<button class="action-btn bg-red-600 hover:bg-red-700 delete-record-btn" data-id="${r.id}" data-table="attendance"><i class="ph ph-trash"></i> حذف</button>`} ];
+                         renderTable(container, columns, data);
+                         break;
+                    case 'leaves': 
+                         ({ data, error } = await _supabase.from('leave_requests').select('*').order('created_at', { ascending: false }));
+                         columns = [ { header: 'اسم الحارس', render: r => r.guardName }, { header: 'أيام الإجازة', render: r => r.days_requested }, { header: 'الحالة', render: r => r.status}, { header: 'الإجراءات', render: r => `<div class="flex gap-2"> <button class="action-btn bg-green-600 hover:bg-green-700 hr-approve-btn" data-id="${r.id}" data-type="leave_requests"><i class="ph ph-check"></i> موافقة</button><button class="action-btn bg-red-600 hover:bg-red-700 hr-reject-btn" data-id="${r.id}" data-type="leave_requests"><i class="ph ph-x"></i> رفض</button><button class="action-btn bg-gray-600 hover:bg-gray-700 delete-record-btn" data-id="${r.id}" data-table="leave_requests"><i class="ph ph-trash"></i> حذف</button> </div>` }];
+                         renderTable(container, columns, data);
+                         break;
+                    case 'loans':
+                         ({ data, error } = await _supabase.from('loan_requests').select('*').order('created_at', { ascending: false }));
+                         columns = [ { header: 'اسم الحارس', render: r => r.guardName }, { header: 'المبلغ', render: r => `${r.amount_requested} ريال` }, { header: 'الحالة', render: r => r.status}, { header: 'الإجراءات', render: r => `<div class="flex gap-2"><button class="action-btn bg-green-600 hover:bg-green-700 hr-approve-btn" data-id="${r.id}" data-type="loan_requests"><i class="ph ph-check"></i> موافقة</button><button class="action-btn bg-red-600 hover:bg-red-700 hr-reject-btn" data-id="${r.id}" data-type="loan_requests"><i class="ph ph-x"></i> رفض</button><button class="action-btn bg-gray-600 hover:bg-gray-700 delete-record-btn" data-id="${r.id}" data-table="loan_requests"><i class="ph ph-trash"></i> حذف</button></div>` }];
+                         renderTable(container, columns, data);
+                         break;
+                    case 'logs':
+                         ({ data, error } = await _supabase.from('activity_log').select('*').order('created_at', { ascending: false }));
+                         columns = [ { header: 'المنفذ', render: r => r.actor }, { header: 'الإجراء', render: r => r.action }, { header: 'التفاصيل', render: r => r.details }, { header: 'الوقت', render: r => new Date(r.created_at).toLocaleString('ar-SA') } ];
+                         renderTable(container, columns, data);
+                         break;
+                }
+                showLoading(false);
+                if(error) return showAlert('فشل تحميل البيانات.');
+            };
+
+            const logout = () => { sessionStorage.clear(); state = { currentGuard: null, currentUser: null, currentRole: null, allGuardsData: [], activeAttendanceId: null }; showPage('landing-page'); };
+            const checkSession = () => {
+                const guard = sessionStorage.getItem('arkanatGuard'); 
+                const user = sessionStorage.getItem('arkanatUser');
+                const role = sessionStorage.getItem('arkanatRole');
+                if (guard) { state.currentGuard = JSON.parse(guard); dom.guardNameDisplay.textContent = state.currentGuard.name; showPage('guard-dashboard-page'); updateGuardButtonState(state.currentGuard.id); }
+                else if (user && role) { state.currentUser = JSON.parse(user); state.currentRole = role; if (role === 'hr') loadHrDashboard(); else loadAdminDashboard(); }
+                else { showPage('landing-page'); }
+            };
+            
+            const setupEventListeners = () => {
+                document.querySelectorAll('.login-option-card').forEach(b => b.addEventListener('click', (e) => { 
+                    state.currentRole = e.currentTarget.dataset.role; 
+                    const isGuard = state.currentRole === 'guard';
+                    document.querySelector('#login-page label[for="login-id"]').textContent = isGuard ? 'رقم الهوية' : 'اسم المستخدم';
+                    dom.loginTitle.textContent = { guard: 'تسجيل دخول الحارس', admin: 'دخول المشرف', operations: 'دخول إدارة العمليات', hr: 'دخول الموارد البشرية' }[state.currentRole];
+                    showPage('login-page'); 
+                }));
+                document.getElementById('login-back-btn').addEventListener('click', () => showPage('landing-page'));
+                document.querySelectorAll('.logout-btn').forEach(b => b.addEventListener('click', logout));
+                document.getElementById('alert-close-btn').addEventListener('click', closeModal);
+                document.querySelectorAll('.modal-close-btn').forEach(b => b.addEventListener('click', closeModal));
+
+                document.getElementById('login-btn').addEventListener('click', async () => {
+                    const id = document.getElementById('login-id').value.trim(); const pass = document.getElementById('login-password').value.trim(); if (!id || !pass) return showAlert("يرجى إدخال البيانات."); showLoading(true);
+                    if (state.currentRole === 'guard') {
+                         const { data, error } = await _supabase.from('guards').select('*').eq('id', id).single(); if (error || !data) showAlert("رقم الهوية غير صحيح."); else if (data.password === pass) { state.currentGuard = data; sessionStorage.setItem('arkanatGuard', JSON.stringify(data)); dom.guardNameDisplay.textContent = state.currentGuard.name; showPage('guard-dashboard-page'); await updateGuardButtonState(state.currentGuard.id); } else showAlert("كلمة المرور غير صحيحة.");
+                    } else { // Admin, Ops, HR
+                        if (id === 'admin' && pass === 'admin') {
+                            const superAdminUser = { name: 'Super Admin', role: 'hr' };
+                            state.currentUser = superAdminUser;
+                            sessionStorage.setItem('arkanatUser', JSON.stringify(superAdminUser));
+                            sessionStorage.setItem('arkanatRole', 'hr'); // Super admin always gets HR role
+                            loadHrDashboard();
+                        } else {
+                            const { data, error } = await _supabase.from('staff').select('*').eq('username', id).eq('role', state.currentRole).single();
+                            if (error || !data) showAlert("اسم المستخدم غير صحيح أو ليس لديه الصلاحية."); else if (data.password === pass) { state.currentUser = data; sessionStorage.setItem('arkanatUser', JSON.stringify(data)); sessionStorage.setItem('arkanatRole', data.role); if (data.role === 'hr') loadHrDashboard(); else loadAdminDashboard(); } else showAlert("كلمة المرور غير صحيحة.");
+                        }
+                    }
+                    showLoading(false);
+                });
+
+                document.querySelectorAll('.dashboard-action-btn.request').forEach(b => b.addEventListener('click', e => showModal(e.currentTarget.dataset.modal)));
+                dom.checkInBtn.addEventListener('click', () => { if (!dom.checkInBtn.disabled) showModal('attendance-modal'); });
+                
+                document.getElementById('submit-attendance-btn').addEventListener('click', async () => {
+                    showLoading(true); const { data, error } = await _supabase.from('attendance').insert({ guardId: state.currentGuard.id, guardName: state.currentGuard.name, notes: document.getElementById('guard-notes').value.trim(), status: 'Pending' }).select().single();
+                    await logActivity(`الحارس: ${state.currentGuard.name}`, 'قام بتسجيل الحضور', `رقم السجل: ${data?.id}`); showLoading(false); closeModal();
+                    if(error) showAlert("فشل تسجيل الحضور."); else { showAlert("تم تسجيل حضورك بنجاح!"); await updateGuardButtonState(state.currentGuard.id); }
+                });
+                
+                dom.checkOutBtn.addEventListener('click', async () => {
+                    if (dom.checkOutBtn.disabled || !state.activeAttendanceId) return; if (!await confirmAction('تأكيد الخروج', 'هل أنت متأكد من رغبتك في تسجيل الخروج الآن؟')) return; showLoading(true);
+                    await fetchAllGuards();
+                    const checkoutTime = new Date();
+                    const {data: attendanceRecord, error: fetchError} = await _supabase.from('attendance').select('created_at').eq('id', state.activeAttendanceId).single();
+                    if (fetchError || !attendanceRecord) { showLoading(false); return showAlert('خطأ: لم يتم العثور على سجل الحضور النشط.'); }
+                    const workDurationMs = checkoutTime - new Date(attendanceRecord.created_at);
+                    const durationString = formatDuration(workDurationMs);
+                    const entitlement = calculateEntitlement(state.currentGuard.id, workDurationMs);
+                    const { error } = await _supabase.from('attendance').update({ checkout_at: checkoutTime.toISOString(), work_duration: durationString, daily_entitlement: entitlement }).eq('id', state.activeAttendanceId);
+                    await logActivity(`الحارس: ${state.currentGuard.name}`, 'قام بتسجيل الخروج', `مدة العمل: ${durationString}`); showLoading(false);
+                    if(error) showAlert("فشل تسجيل الخروج."); else { showAlert("تم تسجيل خروجك بنجاح."); await updateGuardButtonState(state.currentGuard.id); }
+                });
+
+                document.getElementById('submit-leave-btn').addEventListener('click', async () => { const days = document.getElementById('leave-days').value; const reason = document.getElementById('leave-reason').value.trim(); if(!days || !reason) return showAlert('يرجى ملء كل الحقول.'); showLoading(true); await _supabase.from('leave_requests').insert({ guardId: state.currentGuard.id, guardName: state.currentGuard.name, days_requested: days, reason, status: 'Pending' }); await logActivity(`الحارس: ${state.currentGuard.name}`, 'قدم طلب إجازة', `لمدة ${days} يوم`); showLoading(false); closeModal(); showAlert("تم إرسال طلب الإجازة بنجاح."); });
+                document.getElementById('submit-loan-btn').addEventListener('click', async () => { const amount = document.getElementById('loan-amount').value; const reason = document.getElementById('loan-reason').value.trim(); if(!amount || !reason) return showAlert('يرجى ملء كل الحقول.'); showLoading(true); await _supabase.from('loan_requests').insert({ guardId: state.currentGuard.id, guardName: state.currentGuard.name, amount_requested: amount, reason, status: 'Pending' }); await logActivity(`الحارس: ${state.currentGuard.name}`, 'قدم طلب سلفة', `بمبلغ ${amount} ريال`); showLoading(false); closeModal(); showAlert("تم إرسال طلب السلفة بنجاح."); });
+                
+                document.body.addEventListener('click', async (e) => {
+                    const button = e.target.closest('button');
+                    if (!button) return;
+
+                    if(button.id === 'add-guard-btn') {
+                        document.getElementById('guard-form-title').textContent = 'إضافة حارس جديد';
+                        document.getElementById('guard-form-id').value = '';
+                        document.getElementById('guard-form-national-id').disabled = false;
+                        document.getElementById('guard-form-national-id').value = '';
+                        document.getElementById('guard-form-name').value = '';
+                        document.getElementById('guard-form-mobile').value = '';
+                        document.getElementById('guard-form-password').value = '';
+                        document.getElementById('guard-form-title').value = '';
+                        document.getElementById('guard-form-location').value = '';
+                        document.getElementById('guard-form-region').value = '';
+                        document.getElementById('guard-form-project').value = '';
+                        document.getElementById('guard-form-basic-salary').value = '';
+                        document.getElementById('guard-form-housing-allowance').value = '';
+                        document.getElementById('guard-form-transport-allowance').value = '';
+                        document.getElementById('guard-form-other-allowances').value = '';
+                        const scheduleContainer = document.getElementById('guard-form-schedule-container');
+                        const days = { sunday: 'الأحد', monday: 'الإثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس', friday: 'الجمعة', saturday: 'السبت' };
+                        scheduleContainer.innerHTML = Object.entries(days).map(([dayKey, dayName]) => `
+                            <div class="grid grid-cols-5 gap-2 items-center">
+                                <label class="col-span-1 text-gray-300">${dayName}</label>
+                                <label class="text-xs text-center">من</label>
+                                <input type="time" data-day="${dayKey}" data-type="start" class="col-span-1 p-1 bg-slate-700 border border-slate-600 rounded-md">
+                                <label class="text-xs text-center">إلى</label>
+                                <input type="time" data-day="${dayKey}" data-type="end" class="col-span-1 p-1 bg-slate-700 border border-slate-600 rounded-md">
+                            </div>`).join('');
+                        showModal('guard-form-modal');
+                    }
+                    if(button.id === 'add-staff-btn') {
+                         const role = button.dataset.role;
+                         const roleNames = { 'hr': 'موظف موارد بشرية', 'admin': 'مشرف', 'operations': 'موظف عمليات'};
+                         document.getElementById('staff-form-title').textContent = `إضافة ${roleNames[role]} جديد`;
+                         document.getElementById('staff-form-id').value = '';
+                         document.getElementById('staff-form-role').value = role;
+                         document.getElementById('staff-form-name').value = '';
+                         document.getElementById('staff-form-username').value = '';
+                         document.getElementById('staff-form-username').disabled = false;
+                         document.getElementById('staff-form-password').value = '';
+                         document.getElementById('staff-form-title-input').value = '';
+                         document.getElementById('staff-form-title-container').style.display = role === 'hr' ? 'block' : 'none';
+                         document.getElementById('staff-form-assignment-container').style.display = role === 'admin' ? 'grid' : 'none';
+                         showModal('staff-form-modal');
+                    }
+                });
+                
+                dom.adminTableContainer.addEventListener('click', async (e) => {
+                    const button = e.target.closest('button.action-btn');
+                    if (!button) return;
+
+                    const id = button.dataset.id || button.dataset.attendanceId;
+                    
+                    if (button.classList.contains('supervisor-checkout-btn')) {
+                         const guardId = button.dataset.guardId;
+                         const {data: attendanceRecord, error: fetchError} = await _supabase.from('attendance').select('created_at, guardName').eq('id', id).single();
+                         if (fetchError || !attendanceRecord) return showAlert('خطأ: لم يتم العثور على سجل الحضور.');
+                         
+                         const confirmed = await confirmAction('تأكيد الخروج', `هل أنت متأكد من تسجيل الخروج للحارس ${attendanceRecord.guardName}؟`);
+                         if (!confirmed) return;
+
+                         showLoading(true);
+                         const checkoutTime = new Date();
+                         const workDurationMs = checkoutTime - new Date(attendanceRecord.created_at);
+                         const durationString = formatDuration(workDurationMs);
+                         const entitlement = calculateEntitlement(guardId, workDurationMs);
+                         
+                         const updateData = { checkout_at: checkoutTime.toISOString(), work_duration: durationString, daily_entitlement: entitlement };
+                         
+                         const { error } = await _supabase.from('attendance').update(updateData).eq('id', id);
+                         if (error) { 
+                             showLoading(false); 
+                             console.error("Supervisor checkout error:", error);
+                             return showAlert(`فشل تسجيل الخروج. تأكد من أن جميع الأعمدة المطلوبة موجودة في قاعدة البيانات.`);
+                         }
+                         
+                         await logActivity(state.currentUser.name, `قام بتسجيل خروج للحارس`, `اسم الحارس: ${attendanceRecord.guardName}, مدة العمل: ${durationString}`);
+                         showLoading(false);
+                         showAlert('تم تسجيل الخروج بنجاح.');
+                         loadAdminDashboard();
+                         return;
+                    }
+
+                    let newStatus = '';
+                    if (button.classList.contains('approve-btn')) newStatus = 'Approved';
+                    else if (button.classList.contains('cancel-btn')) newStatus = 'Cancelled';
+                    else if (button.classList.contains('modify-btn')) newStatus = 'Pending';
+                    if (!newStatus) return;
+
+                    if (newStatus === 'Cancelled' || newStatus === 'Pending') {
+                        const confirmed = await confirmAction('تأكيد الإجراء', `هل أنت متأكد من ${newStatus === 'Cancelled' ? 'إلغاء' : 'تعديل'} هذا السجل؟`);
+                        if (!confirmed) return;
+                    }
+                    showLoading(true);
+                    const { data, error } = await _supabase.from('attendance').update({ status: newStatus }).eq('id', id).select().single();
+                    showLoading(false);
+                    if(error) return showAlert(`فشلت العملية.`);
+                    const actor = state.currentUser.name;
+                    const action = { Approved: 'قام باعتماد الحضور', Cancelled: 'قام بإلغاء الحضور', Pending: `قام بتعديل حالة الحضور من (${button.dataset.oldStatus}) إلى (معلق)`}[newStatus];
+                    await logActivity(actor, action, `للحارس: ${data?.guardName}`);
+                    loadAdminDashboard();
+                });
+
+                dom.hrTabContent.addEventListener('click', async (e) => {
+                    const button = e.target.closest('button');
+                    if (!button) return;
+                     if (button.classList.contains('edit-staff-btn')) {
+                        const {data: allStaff, error} = await _supabase.from('staff').select('*');
+                        if (error) return showAlert('فشل في جلب بيانات الموظفين');
+                        const staffId = button.dataset.staffId;
+                        const staff = allStaff.find(s => s.id.toString() === staffId);
+                        if (!staff) return showAlert('لم يتم العثور على الموظف.');
+
+                        document.getElementById('staff-form-title').textContent = `تعديل بيانات: ${staff.name}`;
+                        document.getElementById('staff-form-id').value = staff.id;
+                        document.getElementById('staff-form-role').value = staff.role;
+                        document.getElementById('staff-form-name').value = staff.name || '';
+                        document.getElementById('staff-form-username').value = staff.username || '';
+                        document.getElementById('staff-form-username').disabled = true;
+                        document.getElementById('staff-form-password').value = '';
+                        document.getElementById('staff-form-title-input').value = staff.job_title || '';
+                        
+                        const titleContainer = document.getElementById('staff-form-title-container');
+                        const assignmentContainer = document.getElementById('staff-form-assignment-container');
+                        titleContainer.style.display = staff.role === 'hr' ? 'block' : 'none';
+                        assignmentContainer.style.display = staff.role === 'admin' ? 'grid' : 'none';
+
+                        if (staff.role === 'admin') {
+                             const regions = [...new Set(state.allGuardsData.map(i => i.region).filter(Boolean))];
+                             const locations = [...new Set(state.allGuardsData.map(i => i.location).filter(Boolean))];
+                             const projects = [...new Set(state.allGuardsData.map(i => i.project).filter(Boolean))];
+                             document.getElementById('staff-form-region').innerHTML = `<option value="">الكل</option>` + regions.map(o => `<option value="${o}" ${staff.region === o ? 'selected' : ''}>${o}</option>`).join('');
+                             document.getElementById('staff-form-location').innerHTML = `<option value="">الكل</option>` + locations.map(o => `<option value="${o}" ${staff.location === o ? 'selected' : ''}>${o}</option>`).join('');
+                             document.getElementById('staff-form-project').innerHTML = `<option value="">الكل</option>` + projects.map(o => `<option value="${o}" ${staff.project === o ? 'selected' : ''}>${o}</option>`).join('');
+                        }
+                        
+                        showModal('staff-form-modal');
+                    }
+
+                    if (button.classList.contains('edit-guard-btn')) {
+                        const guardId = button.dataset.guardId;
+                        const guard = state.allGuardsData.find(g => g.id.toString() === guardId);
+                        if (!guard) return showAlert('لم يتم العثور على الحارس.');
+
+                        document.getElementById('guard-form-title').textContent = `تعديل بيانات: ${guard.name}`;
+                        document.getElementById('guard-form-id').value = guard.id;
+                        document.getElementById('guard-form-name').value = guard.name || '';
+                        document.getElementById('guard-form-national-id').value = guard.id || '';
+                        document.getElementById('guard-form-national-id').disabled = true;
+                        document.getElementById('guard-form-mobile').value = guard.mobile_number || '';
+                        document.getElementById('guard-form-password').value = '';
+                        document.getElementById('guard-form-title').value = guard.job_title || '';
+                        document.getElementById('guard-form-location').value = guard.location || '';
+                        document.getElementById('guard-form-region').value = guard.region || '';
+                        document.getElementById('guard-form-project').value = guard.project || '';
+                        document.getElementById('guard-form-basic-salary').value = guard.basic_salary || 0;
+                        document.getElementById('guard-form-housing-allowance').value = guard.housing_allowance || 0;
+                        document.getElementById('guard-form-transport-allowance').value = guard.transport_allowance || 0;
+                        document.getElementById('guard-form-other-allowances').value = guard.other_allowances || 0;
+                        
+                        const scheduleContainer = document.getElementById('guard-form-schedule-container');
+                        const days = { sunday: 'الأحد', monday: 'الإثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس', friday: 'الجمعة', saturday: 'السبت' };
+                        scheduleContainer.innerHTML = Object.entries(days).map(([dayKey, dayName]) => {
+                           const shift = guard.weekly_schedule ? (guard.weekly_schedule[dayKey] || {}) : {};
+                           return `<div class="grid grid-cols-5 gap-2 items-center">
+                                <label class="col-span-1 text-gray-300">${dayName}</label>
+                                <label class="text-xs text-center">من</label>
+                                <input type="time" data-day="${dayKey}" data-type="start" class="col-span-1 p-1 bg-slate-700 border border-slate-600 rounded-md" value="${shift.start || ''}">
+                                <label class="text-xs text-center">إلى</label>
+                                <input type="time" data-day="${dayKey}" data-type="end" class="col-span-1 p-1 bg-slate-700 border border-slate-600 rounded-md" value="${shift.end || ''}">
+                            </div>`;
+                        }).join('');
+                        
+                        showModal('guard-form-modal');
+                    }
+                    if (button.classList.contains('view-entitlement-btn')) {
+                        const guardId = button.dataset.guardId;
+                        const guard = state.allGuardsData.find(g => g.id.toString() === guardId);
+                        if (!guard) return;
+                        
+                        showLoading(true);
+                        const {data: records, error} = await _supabase.from('attendance').select('*').eq('guardId', guardId).order('created_at', {ascending: false});
+                        showLoading(false);
+
+                        dom.entitlementModal.title.textContent = `تفاصيل مستحقات: ${guard.name}`;
+                        let totalEntitlement = 0;
+                        let detailsHTML = `<div class="space-y-2">`;
+                        if (records && records.length > 0) {
+                             detailsHTML += `<div class="max-h-64 overflow-y-auto">
+                                <table class="w-full text-right text-sm text-white">
+                                    <thead class="bg-slate-700"><tr>
+                                        <th class="p-2">التاريخ</th><th class="p-2">مدة العمل</th><th class="p-2">المستحق</th>
+                                    </tr></thead>
+                                    <tbody class="divide-y divide-slate-600">`;
+                            records.forEach(r => {
+                                if(r.daily_entitlement) {
+                                    totalEntitlement += r.daily_entitlement;
+                                    detailsHTML += `<tr>
+                                        <td class="p-2">${new Date(r.created_at).toLocaleDateString('ar-SA')}</td>
+                                        <td class="p-2">${r.work_duration || '-'}</td>
+                                        <td class="p-2">${r.daily_entitlement.toFixed(2)} ريال</td>
+                                    </tr>`;
+                                }
+                            });
+                             detailsHTML += `</tbody></table></div>`;
+                        } else {
+                            detailsHTML += `<p>لا توجد سجلات مستحقات لهذا الحارس.</p>`;
+                        }
+                        detailsHTML += `<div class="mt-4 pt-4 border-t border-slate-600 text-lg font-bold flex justify-between"><span>الإجمالي:</span><span>${totalEntitlement.toFixed(2)} ريال</span></div>`;
+
+                        detailsHTML += '</div>';
+                        dom.entitlementModal.body.innerHTML = detailsHTML;
+                        showModal('entitlement-details-modal');
+                    }
+                    if (button.classList.contains('view-schedule-btn')) {
+                        const guardId = button.dataset.guardId;
+                        const guard = state.allGuardsData.find(g => g.id.toString() === guardId);
+                        if (!guard) return;
+                        dom.scheduleModal.title.textContent = `جدول دوام: ${guard.name}`;
+                        const days = { sunday: 'الأحد', monday: 'الإثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس', friday: 'الجمعة', saturday: 'السبت' };
+                        const formatTime = (time) => time ? new Date(`1970-01-01T${time}`).toLocaleTimeString('ar-SA', {hour: '2-digit', minute:'2-digit', hour12: true}) : '---';
+                        let scheduleHTML = '<div class="space-y-3">';
+                        if (guard.weekly_schedule) {
+                            for (const [dayKey, dayName] of Object.entries(days)) {
+                                const shift = guard.weekly_schedule[dayKey];
+                                scheduleHTML += `<div class="flex justify-between items-center bg-slate-700 p-2 rounded-md"><strong>${dayName}:</strong> <span>${shift && shift.start ? `${formatTime(shift.start)} - ${formatTime(shift.end)}` : 'راحة'}</span></div>`;
+                            }
+                        } else { scheduleHTML += '<p>لم يتم تحديد جدول بعد.</p>'; }
+                        scheduleHTML += '</div>';
+                        dom.scheduleModal.body.innerHTML = scheduleHTML;
+                        showModal('schedule-display-modal');
+                    }
+                    if (button.classList.contains('delete-guard-btn')) {
+                        const guardId = button.dataset.guardId;
+                        const guardName = button.dataset.guardName;
+                        const confirmed = await confirmAction('تأكيد الحذف', `هل أنت متأكد من حذف الحارس ${guardName}؟ لا يمكن التراجع عن هذا الإجراء.`);
+                        if (confirmed) {
+                            showLoading(true);
+                            const { error } = await _supabase.from('guards').delete().eq('id', guardId);
+                            showLoading(false);
+                            if (error) { showAlert('فشل حذف الحارس. قد يكون مرتبطًا بسجلات أخرى.'); console.error('Delete error:', error);
+                            } else {
+                                showAlert('تم حذف الحارس بنجاح.');
+                                await logActivity(state.currentUser.name, 'قام بحذف حارس', `اسم الحارس: ${guardName}, رقم الهوية: ${guardId}`);
+                                loadHrDashboard('guards');
+                            }
+                        }
+                    }
+                     if (button.classList.contains('delete-staff-btn')) {
+                        const staffId = button.dataset.staffId;
+                        const staffName = button.dataset.staffName;
+                        const currentTab = dom.hrTabs.querySelector('.active-tab').dataset.tab;
+                        const confirmed = await confirmAction('تأكيد الحذف', `هل أنت متأكد من حذف الموظف ${staffName}؟`);
+                        if (confirmed) {
+                            showLoading(true);
+                            const { error } = await _supabase.from('staff').delete().eq('id', staffId);
+                            showLoading(false);
+                            if (error) { showAlert('فشل حذف الموظف.'); console.error('Delete error:', error);
+                            } else {
+                                showAlert('تم حذف الموظف بنجاح.');
+                                await logActivity(state.currentUser.name, 'قام بحذف موظف', `اسم الموظف: ${staffName}`);
+                                loadHrDashboard(currentTab);
+                            }
+                        }
+                    }
+                    if (button.classList.contains('delete-record-btn')) {
+                        const id = button.dataset.id;
+                        const table = button.dataset.table;
+                        const confirmed = await confirmAction('تأكيد الحذف', `هل أنت متأكد من حذف هذا السجل بشكل نهائي؟`);
+                        if (confirmed) {
+                             showLoading(true);
+                             const { error } = await _supabase.from(table).delete().eq('id', id);
+                             showLoading(false);
+                             if (error) { showAlert('فشل حذف السجل.'); }
+                             else { showAlert('تم حذف السجل بنجاح.'); await logActivity(state.currentUser.name, `قام بحذف سجل من جدول ${table}`, `رقم السجل: ${id}`); loadHrDashboard(dom.hrTabs.querySelector('.active-tab').dataset.tab); }
+                        }
+                    }
+                    if (button.classList.contains('hr-approve-btn') || button.classList.contains('hr-reject-btn')) {
+                        const id = button.dataset.id;
+                        const newStatus = button.classList.contains('hr-approve-btn') ? 'Approved' : 'Rejected';
+                        const requestType = button.dataset.type;
+                        const requestName = requestType === 'leave_requests' ? 'إجازة' : 'سلفة';
+                        const confirmed = await confirmAction('تأكيد الإجراء', `هل أنت متأكد من ${newStatus === 'Approved' ? 'الموافقة على' : 'رفض'} هذا الطلب؟`);
+                        if (!confirmed) return;
+                        showLoading(true);
+                        const { error } = await _supabase.from(requestType).update({ status: newStatus }).eq('id', id);
+                        await logActivity(state.currentUser.name, `قام بـ${newStatus === 'Approved' ? 'الموافقة على' : 'رفض'} طلب ${requestName}`, `للسجل رقم: ${id}`);
+                        showLoading(false);
+                        if (error) showAlert('فشلت العملية.');
+                        else loadHrDashboard(requestType === 'leave_requests' ? 'leaves' : 'loans');
+                    }
+                    if (button.classList.contains('financial-btn')) {
+                        document.getElementById('financial-transaction-guard-id').value = button.dataset.guardId;
+                        const type = button.dataset.type;
+                        document.getElementById('financial-transaction-type').value = type;
+                        document.getElementById('financial-transaction-title').textContent = type === 'deduction' ? 'إضافة خصم' : 'إضافة زيادة';
+                        document.getElementById('financial-transaction-amount').value = '';
+                        document.getElementById('financial-transaction-reason').value = '';
+                        showModal('financial-transaction-modal');
+                    }
+                });
+                
+                const hrTabsContainer = dom.hrTabs; hrTabsContainer.innerHTML = `<a href="#" data-tab="guards" class="hr-tab">الحراس</a><a href="#" data-tab="salaries" class="hr-tab">الرواتب</a><a href="#" data-tab="hr_staff" class="hr-tab">الموارد البشرية</a><a href="#" data-tab="supervisors" class="hr-tab">المشرفون</a><a href="#" data-tab="operations" class="hr-tab">العمليات</a><a href="#" data-tab="attendance" class="hr-tab">الحضور</a><a href="#" data-tab="leaves" class="hr-tab">الإجازات</a><a href="#" data-tab="loans" class="hr-tab">السلف</a><a href="#" data-tab="logs" class="hr-tab">السجل</a>`;
+                hrTabsContainer.addEventListener('click', e => { e.preventDefault(); if(e.target.closest('.hr-tab')) loadHrDashboard(e.target.closest('.hr-tab').dataset.tab); });
+
+                document.getElementById('export-csv-btn').addEventListener('click', async () => {
+                    showLoading(true); const { data: records, error } = await _supabase.from('attendance').select('*').order('created_at', { ascending: false }); showLoading(false); if (error || !records || records.length === 0) return showAlert("لا توجد بيانات لتصديرها.");
+                    let csv = "\uFEFFاسم الحارس,رقم الهوية,وقت الحضور,وقت الخروج,مدة العمل,الملاحظات,الحالة,المستحق اليومي\n";
+                    records.forEach(r => { csv += `"${r.guardName}","${r.guardId}","${new Date(r.created_at).toLocaleString('ar-SA')}","${r.checkout_at ? new Date(r.checkout_at).toLocaleString('ar-SA') : ''}","${r.work_duration || ''}","${r.notes || ''}","${r.status || 'Pending'}","${r.daily_entitlement || ''}"\n`; });
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a"); link.setAttribute("href", URL.createObjectURL(blob)); link.setAttribute("download", `Arkanat-Attendance-${new Date().toISOString().split('T')[0]}.csv`); link.click(); link.remove();
+                });
+                
+                document.getElementById('submit-guard-form-btn').addEventListener('click', async () => {
+                    const guardId = document.getElementById('guard-form-id').value;
+                    const schedule = {};
+                    document.querySelectorAll('#guard-form-schedule-container input[type="time"]').forEach(input => { const day = input.dataset.day; const type = input.dataset.type; if (!schedule[day]) schedule[day] = {}; schedule[day][type] = input.value || null; });
+                    
+                    const guardData = { id: document.getElementById('guard-form-national-id').value.trim(), name: document.getElementById('guard-form-name').value.trim(), mobile_number: document.getElementById('guard-form-mobile').value.trim() || null, job_title: document.getElementById('guard-form-title').value.trim() || null, location: document.getElementById('guard-form-location').value.trim() || null, region: document.getElementById('guard-form-region').value.trim() || null, project: document.getElementById('guard-form-project').value.trim() || null, basic_salary: parseFloat(document.getElementById('guard-form-basic-salary').value) || 0, housing_allowance: parseFloat(document.getElementById('guard-form-housing-allowance').value) || 0, transport_allowance: parseFloat(document.getElementById('guard-form-transport-allowance').value) || 0, other_allowances: parseFloat(document.getElementById('guard-form-other-allowances').value) || 0, weekly_schedule: schedule };
+                    const password = document.getElementById('guard-form-password').value.trim();
+                    if (password) guardData.password = password;
+
+                    if (!guardData.id || !guardData.name) return showAlert('رقم الهوية والاسم حقول إلزامية.');
+                    
+                    showLoading(true);
+                    let error, successMessage, logAction, logDetails;
+                    if (guardId) { // Update
+                        delete guardData.id; 
+                        ({ error } = await _supabase.from('guards').update(guardData).eq('id', guardId));
+                        successMessage = 'تم تحديث بيانات الحارس بنجاح!';
+                        logAction = 'قام بتحديث بيانات حارس';
+                        logDetails = `اسم الحارس: ${guardData.name}`;
+                    } else { // Insert
+                        if (!password) { showLoading(false); return showAlert('كلمة المرور إلزامية عند إضافة حارس جديد.'); }
+                        ({ error } = await _supabase.from('guards').insert(guardData));
+                        successMessage = 'تمت إضافة الحارس بنجاح!';
+                        logAction = 'قام بإضافة حارس جديد';
+                        logDetails = `اسم الحارس: ${guardData.name}`;
+                    }
+                    showLoading(false);
+                    if (error) { if (error.message.includes('duplicate key')) showAlert('فشل الإضافة. رقم الهوية هذا مسجل بالفعل.'); else showAlert(`حدث خطأ: ${error.message}`); return console.error(error); }
+                    await logActivity(state.currentUser.name, logAction, logDetails);
+                    closeModal();
+                    showAlert(successMessage);
+                    loadHrDashboard('guards');
+                });
+                
+                document.getElementById('submit-staff-form-btn').addEventListener('click', async () => {
+                     const staffId = document.getElementById('staff-form-id').value;
+                     const role = document.getElementById('staff-form-role').value;
+                     const staffData = { 
+                         name: document.getElementById('staff-form-name').value.trim(), 
+                         username: document.getElementById('staff-form-username').value.trim(), 
+                         role: role, 
+                         job_title: role === 'hr' ? document.getElementById('staff-form-title-input').value.trim() : null,
+                         region: role === 'admin' ? document.getElementById('staff-form-region').value : null,
+                         location: role === 'admin' ? document.getElementById('staff-form-location').value : null,
+                         project: role === 'admin' ? document.getElementById('staff-form-project').value : null,
+                     };
+                     const password = document.getElementById('staff-form-password').value.trim();
+                     if (password) staffData.password = password;
+
+                     if (!staffData.name || !staffData.username) return showAlert('الاسم واسم المستخدم حقول إلزامية.');
+                     
+                     showLoading(true);
+                     let error, successMessage, logAction, logDetails;
+                     if (staffId) { // Update
+                         delete staffData.username; // Cannot update username
+                         ({ error } = await _supabase.from('staff').update(staffData).eq('id', staffId));
+                         successMessage = 'تم تحديث بيانات الموظف بنجاح!';
+                         logAction = 'قام بتحديث بيانات موظف';
+                         logDetails = `اسم الموظف: ${staffData.name}`;
+                     } else { // Insert
+                         if (!password) { showLoading(false); return showAlert('كلمة المرور إلزامية عند إضافة موظف جديد.'); }
+                         ({ error } = await _supabase.from('staff').insert(staffData));
+                         successMessage = 'تمت إضافة الموظف بنجاح!';
+                         logAction = `أضاف ${role === 'admin' ? 'مشرف' : 'موظف'} جديد`;
+                         logDetails = `الاسم: ${staffData.name}`;
+                     }
+                     showLoading(false);
+                     if (error) { if (error.message.includes('duplicate key')) showAlert('فشل الإضافة. اسم المستخدم هذا مسجل بالفعل.'); else showAlert(`حدث خطأ: ${error.message}`); return console.error(error); }
+                     await logActivity(state.currentUser.name, logAction, logDetails);
+                     closeModal();
+                     showAlert(successMessage);
+                     loadHrDashboard(role === 'hr' ? 'hr_staff' : (role === 'admin' ? 'supervisors' : 'operations'));
+                });
+
+                 document.getElementById('submit-financial-transaction-btn').addEventListener('click', async () => {
+                    const guardId = document.getElementById('financial-transaction-guard-id').value;
+                    const type = document.getElementById('financial-transaction-type').value;
+                    const amount = parseFloat(document.getElementById('financial-transaction-amount').value);
+                    const reason = document.getElementById('financial-transaction-reason').value.trim();
+
+                    if (!guardId || !type || !amount || !reason) return showAlert('جميع الحقول إلزامية.');
+                    if (amount <= 0) return showAlert('يجب أن يكون المبلغ أكبر من صفر.');
+
+                    showLoading(true);
+                    const { error } = await _supabase.from('financial_transactions').insert({
+                        guard_id: guardId,
+                        type: type,
+                        amount: amount,
+                        reason: reason,
+                        created_by: state.currentUser.name
+                    });
+                    showLoading(false);
+
+                    if (error) {
+                        showAlert('فشل تسجيل العملية المالية.');
+                        console.error(error);
+                    } else {
+                        const actionText = type === 'deduction' ? 'خصم' : 'زيادة';
+                        await logActivity(state.currentUser.name, `أضاف ${actionText}`, `للحارس (ID: ${guardId}) بمبلغ ${amount} ريال. السبب: ${reason}`);
+                        closeModal();
+                        showAlert(`تمت إضافة ${actionText} بنجاح.`);
+                        loadHrDashboard('salaries');
+                    }
+                });
+            };
+            
+            showLoading(true);
+            setupEventListeners();
+            checkSession();
+            showLoading(false);
+        };
+        runApp();
+    });
+    </script>
+</body>
+</html>
