@@ -76,6 +76,9 @@
         .on-leave-status {
             @apply flex items-center gap-2 text-blue-400 font-bold;
         }
+        .glowing-text {
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.5), 0 0 10px rgba(255, 255, 255, 0.3);
+        }
     </style>
 </head>
 <body class="bg-slate-900">
@@ -90,6 +93,10 @@
                  <div class="login-option-card" data-role="admin"><i class="ph-fill ph-shield-check text-green-400 text-5xl"></i><h3 class="text-xl font-bold mt-4 text-white">دخول المشرف</h3></div>
                  <div class="login-option-card" data-role="operations"><i class="ph-fill ph-chart-line-up text-indigo-400 text-5xl"></i><h3 class="text-xl font-bold mt-4 text-white">إدارة العمليات</h3></div>
                  <div class="login-option-card" data-role="hr"><i class="ph-fill ph-users-three text-orange-400 text-5xl"></i><h3 class="text-xl font-bold mt-4 text-white">الموارد البشرية</h3></div>
+            </div>
+             <div class="mt-16 text-center">
+                <p class="glowing-text text-gray-300 text-lg">نسخة تجريبية لمعاينة النظام</p>
+                <p class="text-gray-500 text-sm mt-2">تم تصميمه وبرمجته بالكامل من يزيد الصايل.</p>
             </div>
         </div>
     </div>
@@ -110,9 +117,9 @@
     <div id="guard-dashboard-page" class="page flex-col justify-center items-center bg-slate-900 p-4">
         <div class="w-full max-w-4xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl">
              <div class="p-6 border-b border-slate-700 flex justify-between items-center"><h2 class="text-2xl font-bold text-white">مرحباً بك، <span id="guard-name-display"></span></h2><button class="logout-btn text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">تسجيل الخروج</button></div>
-            <div class="p-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-                <button id="check-in-btn" class="dashboard-action-btn check-in" data-modal="attendance-modal"><i class="ph-fill ph-fingerprint text-green-400 text-4xl"></i>تسجيل حضور</button>
-                <button id="check-out-btn" class="dashboard-action-btn check-out"><i class="ph-fill ph-sign-out text-red-400 text-4xl"></i>تسجيل خروج</button>
+            <div id="guard-buttons-container" class="p-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <button id="check-in-btn" class="dashboard-action-btn check-in"><i class="ph-fill ph-fingerprint text-green-400 text-4xl"></i>تسجيل حضور</button>
+                <button id="check-out-btn" class="dashboard-action-btn check-out"><i class="ph-fill ph-sign-out text-red-400 text-4xl"></i>انصراف من الموقع</button>
                 <button class="dashboard-action-btn request" data-modal="leave-modal"><i class="ph-fill ph-calendar-plus text-blue-400 text-4xl"></i>طلب إجازة</button>
                 <button class="dashboard-action-btn request" data-modal="loan-modal"><i class="ph-fill ph-money text-yellow-400 text-4xl"></i>طلب سلفة</button>
             </div>
@@ -181,10 +188,10 @@
                     <label for="staff-form-title-input" class="block text-sm font-medium text-gray-300 mb-2">المسمى الوظيفي</label>
                     <input id="staff-form-title-input" type="text" placeholder="المسمى الوظيفي" class="p-2 w-full border bg-slate-700 border-slate-600 rounded-md">
                 </div>
-                <div id="staff-form-assignment-container" class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                     <div><label for="staff-form-region" class="block text-xs font-medium text-gray-300 mb-1">المنطقة</label><select id="staff-form-region" class="filter-select"></select></div>
-                     <div><label for="staff-form-location" class="block text-xs font-medium text-gray-300 mb-1">الموقع</label><select id="staff-form-location" class="filter-select"></select></div>
-                     <div><label for="staff-form-project" class="block text-xs font-medium text-gray-300 mb-1">المشروع</label><select id="staff-form-project" class="filter-select"></select></div>
+                <div id="staff-form-assignment-container" class="sm:col-span-2 space-y-3">
+                    <label class="block text-sm font-medium text-gray-300">المشاريع المسندة</label>
+                    <div id="staff-form-assignments-list"></div>
+                    <button id="add-assignment-btn" class="text-sm text-blue-400 hover:text-blue-300">+ إضافة مشروع آخر</button>
                 </div>
             </div>
             <div class="p-4 bg-slate-900 flex justify-end gap-3">
@@ -228,7 +235,7 @@
             <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button></div>
         </div>
 
-        <!-- Other Modals -->
+        <!-- Attendance Modal with Notes -->
         <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="attendance-modal">
              <h3 class="text-xl font-bold p-4 border-b border-slate-700">تسجيل الحضور</h3><div class="p-6 space-y-4"><label for="guard-notes" class="block">ملاحظات (اختياري)</label><textarea id="guard-notes" rows="4" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea></div>
              <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button><button id="submit-attendance-btn" class="font-semibold bg-green-600 text-white px-4 py-2 rounded-lg transition hover:bg-green-700">تأكيد الحضور</button></div>
@@ -254,8 +261,8 @@
         const runApp = async () => {
             // --- IMPORTANT: DATABASE SETUP ---
             // 'guards' table: mobile_number (text), weekly_schedule (jsonb), transport_allowance (numeric)
-            // 'attendance' table: checkout_at (timestamptz), work_duration (text), daily_entitlement (numeric)
-            // 'staff' table: id(pk, auto), name(text), username(text, unique), password(text), role(text), job_title(text, nullable), region, location, project
+            // 'attendance' table: checkout_at (timestamptz), work_duration (text), daily_entitlement (numeric), checkin_location(text), checkout_location(text)
+            // 'staff' table: id(pk, auto), name(text), username(text, unique), password(text), role(text), job_title(text, nullable), assignments(jsonb)
             // NEW TABLE 'financial_transactions': id, guard_id, type, amount, reason, created_by, created_at
             // ---------------------------------
             const SUPABASE_URL = 'https://tlgyxbdjdhdjgkcndxoi.supabase.co';
@@ -285,6 +292,28 @@
                 if (parts.length !== 3) return 0;
                 const [hours, minutes, seconds] = parts.map(Number);
                 return (hours * 3600 + minutes * 60 + seconds) * 1000;
+            };
+            const addAssignmentRow = (assignment = {}) => {
+                const assignmentsList = document.getElementById('staff-form-assignments-list');
+                const newRow = document.createElement('div');
+                newRow.className = 'assignment-row grid grid-cols-1 sm:grid-cols-4 gap-2 items-center';
+
+                const regions = [...new Set(state.allGuardsData.map(i => i.region).filter(Boolean))];
+                const locations = [...new Set(state.allGuardsData.map(i => i.location).filter(Boolean))];
+                const projects = [...new Set(state.allGuardsData.map(i => i.project).filter(Boolean))];
+
+                newRow.innerHTML = `
+                    <select data-type="region" class="filter-select col-span-1">${['<option value="">المنطقة (الكل)</option>', ...regions.map(o => `<option value="${o}" ${assignment.region === o ? 'selected' : ''}>${o}</option>`)].join('')}</select>
+                    <select data-type="location" class="filter-select col-span-1">${['<option value="">الموقع (الكل)</option>', ...locations.map(o => `<option value="${o}" ${assignment.location === o ? 'selected' : ''}>${o}</option>`)].join('')}</select>
+                    <select data-type="project" class="filter-select col-span-1">${['<option value="">المشروع (الكل)</option>', ...projects.map(o => `<option value="${o}" ${assignment.project === o ? 'selected' : ''}>${o}</option>`)].join('')}</select>
+                    <button type="button" class="remove-assignment-btn action-btn bg-red-600 hover:bg-red-700 col-span-1"><i class="ph ph-trash"></i></button>
+                `;
+                
+                newRow.querySelector('.remove-assignment-btn').addEventListener('click', () => {
+                    newRow.remove();
+                });
+
+                assignmentsList.appendChild(newRow);
             };
 
             const calculateEntitlement = (guardId, workDurationMs) => {
@@ -356,24 +385,26 @@
                 dom.adminDashboardTitle.textContent = {admin: 'لوحة تحكم المشرف', operations: 'لوحة تحكم العمليات'}[state.currentRole];
                 showLoading(true);
                 await fetchAllGuards();
-                let { data, error } = await _supabase.from('attendance').select('*').order('created_at', { ascending: false });
-                
-                // Filter attendance records if the user is a supervisor with specific assignments
-                if (state.currentRole === 'admin' && state.currentUser.name !== 'Super Admin' && (state.currentUser.region || state.currentUser.location || state.currentUser.project)) {
-                    const supervisedGuardIds = state.allGuardsData.filter(g => 
-                        (!state.currentUser.region || g.region === state.currentUser.region) &&
-                        (!state.currentUser.location || g.location === state.currentUser.location) &&
-                        (!state.currentUser.project || g.project === state.currentUser.project)
-                    ).map(g => g.id);
-                    data = data.filter(att => supervisedGuardIds.includes(att.guardId));
-                }
+                let query = _supabase.from('attendance').select('*').order('created_at', { ascending: false });
 
+                if (state.currentUser && state.currentUser.name !== 'Super Admin' && state.currentUser.assignments && state.currentUser.assignments.length > 0) {
+                     const supervisedGuardIds = state.allGuardsData.filter(g => {
+                        return state.currentUser.assignments.some(a => 
+                             (!a.region || g.region === a.region) &&
+                             (!a.location || g.location === a.location) &&
+                             (!a.project || g.project === a.project)
+                        );
+                     }).map(g => g.id);
+                    query = query.in('guardId', supervisedGuardIds.length > 0 ? supervisedGuardIds : ['']); // Prevent error if array is empty
+                }
+                
+                const { data, error } = await query;
                 showLoading(false);
                 if(error) return showAlert('فشل تحميل السجلات.');
                 
                 const columns = [
                     { header: 'اسم الحارس', render: r => r.guardName },
-                    { header: 'وقت الحضور', render: r => new Date(r.created_at).toLocaleString('ar-SA') },
+                    { header: 'لوكيشن الحضور', render: r => r.checkin_location ? `<a href="https://www.google.com/maps?q=${r.checkin_location}" target="_blank" class="text-blue-400 hover:underline">عرض الخريطة</a>` : '-' },
                     { header: 'مدة العمل / الحالة', render: r => {
                         if (!r.checkout_at) {
                             let supervisorBtn = '';
@@ -384,7 +415,7 @@
                         }
                         return r.work_duration || '-';
                     }},
-                    { header: 'المستحق اليومي', render: r => r.daily_entitlement ? `${r.daily_entitlement.toFixed(2)} ريال` : '-' },
+                    { header: 'لوكيشن الانصراف', render: r => r.checkout_location ? `<a href="https://www.google.com/maps?q=${r.checkout_location}" target="_blank" class="text-blue-400 hover:underline">عرض الخريطة</a>` : '-' },
                     { header: 'الإجراءات', render: r => {
                         const statusMap = { Approved: { text: 'معتمد', color: 'text-green-400' }, Cancelled: { text: 'ملغي', color: 'text-red-400' }};
                         const currentStatus = statusMap[r.status];
@@ -618,27 +649,56 @@
                     showLoading(false);
                 });
 
-                document.querySelectorAll('.dashboard-action-btn.request').forEach(b => b.addEventListener('click', e => showModal(e.currentTarget.dataset.modal)));
-                dom.checkInBtn.addEventListener('click', () => { if (!dom.checkInBtn.disabled) showModal('attendance-modal'); });
+                document.getElementById('guard-buttons-container').addEventListener('click', (e) => {
+                    const button = e.target.closest('button');
+                    if (!button) return;
+                    
+                    if (button.id === 'check-in-btn') {
+                        if (!button.disabled) showModal('attendance-modal');
+                    } else if (button.classList.contains('request')) {
+                        showModal(button.dataset.modal);
+                    }
+                });
                 
                 document.getElementById('submit-attendance-btn').addEventListener('click', async () => {
-                    showLoading(true); const { data, error } = await _supabase.from('attendance').insert({ guardId: state.currentGuard.id, guardName: state.currentGuard.name, notes: document.getElementById('guard-notes').value.trim(), status: 'Pending' }).select().single();
-                    await logActivity(`الحارس: ${state.currentGuard.name}`, 'قام بتسجيل الحضور', `رقم السجل: ${data?.id}`); showLoading(false); closeModal();
-                    if(error) showAlert("فشل تسجيل الحضور."); else { showAlert("تم تسجيل حضورك بنجاح!"); await updateGuardButtonState(state.currentGuard.id); }
+                    showLoading(true); 
+                    try {
+                        const location = await getCurrentLocation();
+                        const { data, error } = await _supabase.from('attendance').insert({ guardId: state.currentGuard.id, guardName: state.currentGuard.name, notes: document.getElementById('guard-notes').value.trim(), status: 'Pending', checkin_location: location }).select().single();
+                        closeModal();
+                        if (error) throw error;
+                        await logActivity(`الحارس: ${state.currentGuard.name}`, 'قام بتسجيل الحضور', `رقم السجل: ${data?.id}`);
+                        showAlert("تم تسجيل حضورك بنجاح!"); 
+                        await updateGuardButtonState(state.currentGuard.id); 
+                    } catch (error) {
+                        showAlert(`فشل تسجيل الحضور: ${error.message}`);
+                    } finally {
+                        showLoading(false);
+                    }
                 });
                 
                 dom.checkOutBtn.addEventListener('click', async () => {
-                    if (dom.checkOutBtn.disabled || !state.activeAttendanceId) return; if (!await confirmAction('تأكيد الخروج', 'هل أنت متأكد من رغبتك في تسجيل الخروج الآن؟')) return; showLoading(true);
-                    await fetchAllGuards();
-                    const checkoutTime = new Date();
-                    const {data: attendanceRecord, error: fetchError} = await _supabase.from('attendance').select('created_at').eq('id', state.activeAttendanceId).single();
-                    if (fetchError || !attendanceRecord) { showLoading(false); return showAlert('خطأ: لم يتم العثور على سجل الحضور النشط.'); }
-                    const workDurationMs = checkoutTime - new Date(attendanceRecord.created_at);
-                    const durationString = formatDuration(workDurationMs);
-                    const entitlement = calculateEntitlement(state.currentGuard.id, workDurationMs);
-                    const { error } = await _supabase.from('attendance').update({ checkout_at: checkoutTime.toISOString(), work_duration: durationString, daily_entitlement: entitlement }).eq('id', state.activeAttendanceId);
-                    await logActivity(`الحارس: ${state.currentGuard.name}`, 'قام بتسجيل الخروج', `مدة العمل: ${durationString}`); showLoading(false);
-                    if(error) showAlert("فشل تسجيل الخروج."); else { showAlert("تم تسجيل خروجك بنجاح."); await updateGuardButtonState(state.currentGuard.id); }
+                    if (dom.checkOutBtn.disabled || !state.activeAttendanceId) return; 
+                    if (!await confirmAction('تأكيد الانصراف', 'هل أنت متأكد من رغبتك في الانصراف الآن؟')) return; 
+                    showLoading(true);
+                    try {
+                        const location = await getCurrentLocation();
+                        await fetchAllGuards();
+                        const checkoutTime = new Date();
+                        const {data: attendanceRecord, error: fetchError} = await _supabase.from('attendance').select('created_at').eq('id', state.activeAttendanceId).single();
+                        if (fetchError || !attendanceRecord) { throw new Error('لم يتم العثور على سجل الحضور النشط.'); }
+                        const workDurationMs = checkoutTime - new Date(attendanceRecord.created_at);
+                        const durationString = formatDuration(workDurationMs);
+                        const entitlement = calculateEntitlement(state.currentGuard.id, workDurationMs);
+                        const { error } = await _supabase.from('attendance').update({ checkout_at: checkoutTime.toISOString(), work_duration: durationString, daily_entitlement: entitlement, checkout_location: location }).eq('id', state.activeAttendanceId);
+                        if(error) throw error;
+                        await logActivity(`الحارس: ${state.currentGuard.name}`, 'قام بالانصراف', `مدة العمل: ${durationString}`);
+                        showAlert("تم تسجيل انصرافك بنجاح."); await updateGuardButtonState(state.currentGuard.id);
+                    } catch (error) {
+                        showAlert(`فشل الانصراف: ${error.message}`);
+                    } finally {
+                        showLoading(false);
+                    }
                 });
 
                 document.getElementById('submit-leave-btn').addEventListener('click', async () => { const days = document.getElementById('leave-days').value; const reason = document.getElementById('leave-reason').value.trim(); if(!days || !reason) return showAlert('يرجى ملء كل الحقول.'); showLoading(true); await _supabase.from('leave_requests').insert({ guardId: state.currentGuard.id, guardName: state.currentGuard.name, days_requested: days, reason, status: 'Pending' }); await logActivity(`الحارس: ${state.currentGuard.name}`, 'قدم طلب إجازة', `لمدة ${days} يوم`); showLoading(false); closeModal(); showAlert("تم إرسال طلب الإجازة بنجاح."); });
@@ -688,8 +748,13 @@
                          document.getElementById('staff-form-password').value = '';
                          document.getElementById('staff-form-title-input').value = '';
                          document.getElementById('staff-form-title-container').style.display = role === 'hr' ? 'block' : 'none';
-                         document.getElementById('staff-form-assignment-container').style.display = role === 'admin' ? 'grid' : 'none';
+                         document.getElementById('staff-form-assignment-container').style.display = (role === 'admin' || role === 'operations') ? 'block' : 'none';
+                         document.getElementById('staff-form-assignments-list').innerHTML = ''; // Clear previous
+                         addAssignmentRow(); // Add the first row
                          showModal('staff-form-modal');
+                    }
+                     if(button.id === 'add-assignment-btn'){
+                        addAssignmentRow();
                     }
                 });
                 
@@ -752,7 +817,8 @@
                 dom.hrTabContent.addEventListener('click', async (e) => {
                     const button = e.target.closest('button');
                     if (!button) return;
-                     if (button.classList.contains('edit-staff-btn')) {
+
+                    if (button.classList.contains('edit-staff-btn')) {
                         const {data: allStaff, error} = await _supabase.from('staff').select('*');
                         if (error) return showAlert('فشل في جلب بيانات الموظفين');
                         const staffId = button.dataset.staffId;
@@ -770,21 +836,18 @@
                         
                         const titleContainer = document.getElementById('staff-form-title-container');
                         const assignmentContainer = document.getElementById('staff-form-assignment-container');
+                        const assignmentsList = document.getElementById('staff-form-assignments-list');
                         titleContainer.style.display = staff.role === 'hr' ? 'block' : 'none';
-                        assignmentContainer.style.display = staff.role === 'admin' ? 'grid' : 'none';
+                        assignmentContainer.style.display = ['admin', 'operations'].includes(staff.role) ? 'block' : 'none';
+                        assignmentsList.innerHTML = '';
 
-                        if (staff.role === 'admin') {
-                             const regions = [...new Set(state.allGuardsData.map(i => i.region).filter(Boolean))];
-                             const locations = [...new Set(state.allGuardsData.map(i => i.location).filter(Boolean))];
-                             const projects = [...new Set(state.allGuardsData.map(i => i.project).filter(Boolean))];
-                             document.getElementById('staff-form-region').innerHTML = `<option value="">الكل</option>` + regions.map(o => `<option value="${o}" ${staff.region === o ? 'selected' : ''}>${o}</option>`).join('');
-                             document.getElementById('staff-form-location').innerHTML = `<option value="">الكل</option>` + locations.map(o => `<option value="${o}" ${staff.location === o ? 'selected' : ''}>${o}</option>`).join('');
-                             document.getElementById('staff-form-project').innerHTML = `<option value="">الكل</option>` + projects.map(o => `<option value="${o}" ${staff.project === o ? 'selected' : ''}>${o}</option>`).join('');
+                        if (['admin', 'operations'].includes(staff.role)) {
+                           const assignments = staff.assignments || [{}]; // Start with one row if none exist
+                           assignments.forEach(assignment => addAssignmentRow(assignment));
                         }
                         
                         showModal('staff-form-modal');
                     }
-
                     if (button.classList.contains('edit-guard-btn')) {
                         const guardId = button.dataset.guardId;
                         const guard = state.allGuardsData.find(g => g.id.toString() === guardId);
@@ -995,14 +1058,23 @@
                 document.getElementById('submit-staff-form-btn').addEventListener('click', async () => {
                      const staffId = document.getElementById('staff-form-id').value;
                      const role = document.getElementById('staff-form-role').value;
+                     
+                     const assignments = [];
+                     document.querySelectorAll('.assignment-row').forEach(row => {
+                        const region = row.querySelector('[data-type="region"]').value;
+                        const location = row.querySelector('[data-type="location"]').value;
+                        const project = row.querySelector('[data-type="project"]').value;
+                        if(region || location || project) {
+                            assignments.push({ region: region || null, location: location || null, project: project || null });
+                        }
+                     });
+
                      const staffData = { 
                          name: document.getElementById('staff-form-name').value.trim(), 
                          username: document.getElementById('staff-form-username').value.trim(), 
                          role: role, 
                          job_title: role === 'hr' ? document.getElementById('staff-form-title-input').value.trim() : null,
-                         region: role === 'admin' ? document.getElementById('staff-form-region').value : null,
-                         location: role === 'admin' ? document.getElementById('staff-form-location').value : null,
-                         project: role === 'admin' ? document.getElementById('staff-form-project').value : null,
+                         assignments: (role === 'admin' || role === 'operations') ? assignments : null,
                      };
                      const password = document.getElementById('staff-form-password').value.trim();
                      if (password) staffData.password = password;
