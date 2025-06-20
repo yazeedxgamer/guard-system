@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Title and Favicon -->
     <title>Arkanat Guard System</title>
     <link rel="icon" type="image/svg+xml" href="https://arkanat.com.sa/wp-content/uploads/2024/07/logo.svg">
     
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,7 +31,7 @@
             opacity: 1;
         }
         .table-container {
-            max-height: 55vh;
+            max-height: 60vh;
             overflow-y: auto;
         }
         .table-container thead th {
@@ -37,17 +40,20 @@
             z-index: 10;
             background-color: #1e293b;
         }
-        .hr-tab {
-            @apply py-4 px-1 border-b-2 font-medium text-xs sm:text-lg transition-colors duration-200 whitespace-nowrap;
+        .custom-tab {
+            @apply px-4 py-3 font-medium text-sm sm:text-base transition-colors duration-200 whitespace-nowrap cursor-pointer rounded-t-lg border-b-4 border-transparent;
         }
-        .hr-tab.active-tab {
-             @apply border-blue-500 text-blue-500;
+        .custom-tab.active-tab {
+             @apply bg-slate-700 text-white border-blue-500;
         }
-        .hr-tab:not(.active-tab) {
-             @apply border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500;
+        .custom-tab:not(.active-tab) {
+             @apply text-gray-400 hover:bg-slate-800/60 hover:text-gray-200;
         }
         .action-btn {
             @apply text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-px flex items-center justify-center gap-1;
+        }
+        .header-btn {
+             @apply text-white font-semibold px-4 py-2 rounded-lg transition;
         }
         .modal-content {
             display: none;
@@ -56,7 +62,7 @@
             display: flex;
         }
         .filter-select {
-            @apply bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5;
+            @apply bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 transition;
         }
         .dashboard-action-btn {
             @apply flex flex-col items-center justify-center gap-2 bg-slate-800 p-6 rounded-xl shadow-lg text-center text-lg font-bold text-gray-200 border border-slate-700 hover:shadow-xl hover:bg-slate-700 hover:-translate-y-1 transition-all duration-300;
@@ -76,28 +82,32 @@
         .glowing-text {
             text-shadow: 0 0 8px rgba(255, 255, 255, 0.5), 0 0 10px rgba(255, 255, 255, 0.3);
         }
+        .login-option-card { @apply bg-slate-800 p-8 rounded-2xl shadow-lg cursor-pointer transition-all duration-300 hover:shadow-blue-500/20 hover:-translate-y-2 border border-slate-700 hover:border-blue-500; }
+        .coverage-card { @apply bg-slate-800/50 p-4 rounded-lg border border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4; }
     </style>
 </head>
 <body class="bg-slate-900">
 
+    <!-- =========== New Landing Page =========== -->
     <div id="landing-page" class="page active flex-col justify-center items-center p-4 sm:p-8">
-        <div class="w-full max-w-4xl text-center">
+        <div class="w-full max-w-5xl text-center">
             <img src="https://arkanat.com.sa/wp-content/uploads/2024/07/logo.svg" alt="شعار اركانات" class="h-20 sm:h-24 mb-6 mx-auto" onerror="this.onerror=null; this.src='https://placehold.co/200x70/FFFFFF/000000?text=Arkanat';">
             <h1 class="text-4xl md:text-5xl font-bold mb-4 text-white">نظام ادارة الحراسات الالكتروني</h1>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mt-12">
                  <div class="login-option-card" data-role="guard"><i class="ph-fill ph-user text-blue-400 text-5xl"></i><h3 class="text-xl font-bold mt-4 text-white">دخول الحارس</h3><p class="text-gray-400 text-sm mt-1">تسجيل الحضور وتقديم الطلبات</p></div>
+                 <div class="login-option-card" data-role="coverage_guard"><i class="ph-fill ph-users text-teal-400 text-5xl"></i><h3 class="text-xl font-bold mt-4 text-white">حراس التغطيات</h3><p class="text-gray-400 text-sm mt-1">عرض وتقديم على التغطيات</p></div>
                  <div class="login-option-card" data-role="admin"><i class="ph-fill ph-shield-check text-green-400 text-5xl"></i><h3 class="text-xl font-bold mt-4 text-white">دخول المشرف</h3></div>
                  <div class="login-option-card" data-role="operations"><i class="ph-fill ph-chart-line-up text-indigo-400 text-5xl"></i><h3 class="text-xl font-bold mt-4 text-white">إدارة العمليات</h3></div>
                  <div class="login-option-card" data-role="hr"><i class="ph-fill ph-users-three text-orange-400 text-5xl"></i><h3 class="text-xl font-bold mt-4 text-white">الموارد البشرية</h3></div>
             </div>
              <div class="mt-16 text-center">
-                <p class="glowing-text text-gray-300 text-lg">نسخة تجريبية لمعاينة النظام</p>
-                <p class="text-gray-500 text-sm mt-2">تم تصميمه وبرمجته بالكامل من يزيد الصايل.</p>
-            </div>
+                 <p class="glowing-text text-gray-300 text-lg">نسخة تجريبية لمعاينة النظام</p>
+                 <p class="text-gray-500 text-sm mt-2">تم تصميمه وبرمجته بالكامل من يزيد الصايل.</p>
+             </div>
         </div>
     </div>
-    <style>.login-option-card { @apply bg-slate-800 p-8 rounded-2xl shadow-lg cursor-pointer transition-all duration-300 hover:shadow-blue-500/20 hover:-translate-y-2 border border-slate-700 hover:border-blue-500; }</style>
 
+    <!-- =========== Unified Login Page =========== -->
     <div id="login-page" class="page justify-center items-center bg-slate-900 p-4">
         <div class="w-full max-w-md bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl p-8 space-y-6">
             <div class="text-center"><h2 id="login-title" class="text-3xl font-bold text-white">تسجيل الدخول</h2></div>
@@ -108,50 +118,91 @@
         </div>
     </div>
     
+    <!-- =========== Guard Dashboard Page =========== -->
     <div id="guard-dashboard-page" class="page flex-col justify-center items-center bg-slate-900 p-4">
-        <div class="w-full max-w-4xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl">
-             <div class="p-6 border-b border-slate-700 flex justify-between items-center"><h2 class="text-2xl font-bold text-white">مرحباً بك، <span id="guard-name-display"></span></h2><button class="logout-btn text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">تسجيل الخروج</button></div>
-            <div id="guard-buttons-container" class="p-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="w-full max-w-5xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl">
+             <div class="p-6 border-b border-slate-700 flex justify-between items-center"><h2 class="text-2xl font-bold text-white">مرحباً بك، <span id="guard-name-display"></span></h2><button class="logout-btn header-btn bg-red-600 hover:bg-red-700">تسجيل الخروج</button></div>
+            <div id="guard-buttons-container" class="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
                 <button id="check-in-btn" class="dashboard-action-btn check-in"><i class="ph-fill ph-fingerprint text-green-400 text-4xl"></i>تسجيل حضور</button>
                 <button id="check-out-btn" class="dashboard-action-btn check-out"><i class="ph-fill ph-sign-out text-red-400 text-4xl"></i>انصراف من الموقع</button>
                 <button class="dashboard-action-btn request" data-modal="leave-modal"><i class="ph-fill ph-calendar-plus text-blue-400 text-4xl"></i>طلب إجازة</button>
                 <button class="dashboard-action-btn request" data-modal="loan-modal"><i class="ph-fill ph-money text-yellow-400 text-4xl"></i>طلب سلفة</button>
+                <button class="dashboard-action-btn request" data-modal="permission-modal"><i class="ph-fill ph-timer text-purple-400 text-4xl"></i>طلب استئذان</button>
+                <button class="dashboard-action-btn request" data-modal="overtime-modal"><i class="ph-fill ph-clock-clockwise text-teal-400 text-4xl"></i>طلب عمل إضافي</button>
+                <button class="dashboard-action-btn request" data-modal="resignation-modal"><i class="ph-fill ph-door-open text-gray-400 text-4xl"></i>طلب استقالة</button>
             </div>
-        </div>
-    </div>
-
-    <div id="admin-dashboard-page" class="page flex-col items-center bg-slate-900 p-4 sm:p-6 md:p-8 w-full">
-         <div class="w-full max-w-7xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl">
-            <div class="p-4 sm:p-6 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <h2 id="admin-dashboard-title" class="text-2xl font-bold text-white">لوحة التحكم</h2>
-                <div class="flex items-center gap-3"><button id="export-csv-btn" class="text-white font-semibold bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition">تصدير إلى CSV</button><button class="logout-btn text-white font-semibold bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition">تسجيل الخروج</button></div>
-            </div>
-            <div id="admin-table-container" class="table-container p-4"></div>
         </div>
     </div>
     
+    <!-- =========== Coverage Guard Dashboard Page =========== -->
+    <div id="coverage-guard-dashboard-page" class="page flex-col items-center bg-slate-900 p-4 sm:p-6 md:p-8 w-full">
+         <div class="w-full max-w-full lg:max-w-7xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl">
+              <div class="p-4 sm:p-6 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4">
+                  <h2 class="text-2xl font-bold text-white">لوحة تحكم حراس التغطيات: <span id="coverage-guard-name-display"></span></h2>
+                  <button class="logout-btn header-btn bg-red-600 hover:bg-red-700">تسجيل الخروج</button>
+              </div>
+              <div class="border-b border-slate-700 bg-slate-900/50 px-2 sm:px-4">
+                <nav id="coverage-guard-tabs" class="flex space-x-2" aria-label="Tabs">
+                    <a href="#" data-tab="available_coverages" class="custom-tab active-tab">التغطيات المتوفرة</a>
+                    <a href="#" data-tab="my_coverages" class="custom-tab">تغطياتي</a>
+                </nav>
+            </div>
+              <div id="coverage-guard-tab-content" class="p-4"></div>
+        </div>
+    </div>
+
+    <!-- =========== Admin/Ops Dashboard Page =========== -->
+    <div id="admin-dashboard-page" class="page flex-col items-center bg-slate-900 p-4 sm:p-6 md:p-8 w-full">
+         <div class="w-full max-w-full lg:max-w-7xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl">
+              <div class="p-4 sm:p-6 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4">
+                  <h2 id="admin-dashboard-title" class="text-2xl font-bold text-white">لوحة التحكم</h2>
+                  <div id="admin-header-actions" class="flex items-center gap-3">
+                      <!-- Buttons are added dynamically by JS -->
+                  </div>
+              </div>
+              <div class="border-b border-slate-700 bg-slate-900/50 px-2 sm:px-4"><nav id="admin-ops-tabs" class="flex space-x-2" aria-label="Tabs"></nav></div>
+              <div id="admin-tab-content" class="p-4"></div>
+        </div>
+    </div>
+    
+    <!-- =========== HR Dashboard Page =========== -->
     <div id="hr-dashboard-page" class="page flex-col items-center bg-slate-900 p-4 sm:p-6 md:p-8 w-full">
-        <div class="w-full max-w-7xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl">
-            <div class="p-4 sm:p-6 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4"><h2 class="text-2xl font-bold text-white">لوحة تحكم الموارد البشرية</h2><button class="logout-btn text-white font-semibold bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition">تسجيل الخروج</button></div>
-            <div class="border-b border-slate-700"><nav id="hr-tabs" class="flex space-x-2 sm:space-x-4 px-2 sm:px-6 overflow-x-auto"></nav></div>
+        <div class="w-full max-w-full lg:max-w-7xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl">
+            <div class="p-4 sm:p-6 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <h2 class="text-2xl font-bold text-white">لوحة تحكم الموارد البشرية</h2>
+                 <div id="hr-header-actions" class="flex items-center gap-3">
+                     <button id="hr-export-csv-btn" data-target-table="" class="header-btn bg-blue-600 hover:bg-blue-700">تصدير CSV</button>
+                     <button class="logout-btn header-btn bg-red-600 hover:bg-red-700">تسجيل الخروج</button>
+                 </div>
+            </div>
+            <div class="border-b border-slate-700 bg-slate-900/50 px-2 sm:px-4"><nav id="hr-tabs" class="flex space-x-2 overflow-x-auto"></nav></div>
             <div id="hr-tab-content" class="p-4"></div>
         </div>
     </div>
 
+    <!-- Modals -->
     <div id="modal-container" class="hidden fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4 overflow-y-auto">
+        <!-- Add/Edit Guard Modal -->
         <div class="modal-content flex-col w-full max-w-3xl bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="guard-form-modal">
-            <h3 id="guard-form-title" class="text-xl font-bold p-4 border-b border-slate-700"></h3>
-            <div class="p-6 space-y-6">
+            <h3 id="guard-form-title-text" class="text-xl font-bold p-4 border-b border-slate-700"></h3>
+            <div class="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
                 <input type="hidden" id="guard-form-id">
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     <input id="guard-form-name" type="text" placeholder="اسم الحارس الكامل" class="p-2 border bg-slate-700 border-slate-600 rounded-md md:col-span-3">
                     <input id="guard-form-national-id" type="text" placeholder="رقم الهوية" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
                     <input id="guard-form-mobile" type="text" placeholder="رقم الجوال" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
                     <input id="guard-form-password" type="text" placeholder="كلمة المرور (اتركه فارغاً لعدم التغيير)" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
-                    <input id="guard-form-title" type="text" placeholder="المسمى الوظيفي" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                    <input id="guard-form-job-title" type="text" placeholder="المسمى الوظيفي" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
                     <input id="guard-form-location" type="text" placeholder="الموقع" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
                     <input id="guard-form-region" type="text" placeholder="المنطقة" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
-                    <input id="guard-form-project" type="text" placeholder="المشروع" class="p-2 border bg-slate-700 border-slate-600 rounded-md md:col-span-3">
+                    <input id="guard-form-project" type="text" placeholder="المشروع" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                     <div>
+                         <label for="guard-form-status" class="block text-sm font-medium text-gray-300 mb-1">حالة الموظف</label>
+                         <select id="guard-form-status" class="filter-select">
+                             <option value="اساسي">أساسي</option>
+                             <option value="بديل">بديل</option>
+                         </select>
+                     </div>
                     <input id="guard-form-basic-salary" type="number" placeholder="راتب اساسي" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
                     <input id="guard-form-housing-allowance" type="number" placeholder="بدل سكن" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
                     <input id="guard-form-transport-allowance" type="number" placeholder="بدل نقل" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
@@ -165,6 +216,65 @@
             <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button><button id="submit-guard-form-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">حفظ</button></div>
         </div>
 
+        <!-- Add/Edit Coverage Guard Modal -->
+        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="coverage-guard-form-modal">
+            <h3 id="coverage-guard-form-title" class="text-xl font-bold p-4 border-b border-slate-700"></h3>
+            <input type="hidden" id="coverage-guard-form-id">
+            <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input id="coverage-guard-form-name" type="text" placeholder="الاسم الكامل" class="p-2 border bg-slate-700 border-slate-600 rounded-md sm:col-span-2">
+                <input id="coverage-guard-form-national-id" type="text" placeholder="رقم الهوية" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                <input id="coverage-guard-form-mobile" type="text" placeholder="رقم الجوال" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                <input id="coverage-guard-form-password" type="text" placeholder="كلمة المرور" class="p-2 border bg-slate-700 border-slate-600 rounded-md sm:col-span-2">
+            </div>
+            <div class="p-4 bg-slate-900 flex justify-end gap-3">
+                <button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button>
+                <button id="submit-coverage-guard-form-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">حفظ</button>
+            </div>
+        </div>
+        
+        <!-- Add/Edit Coverage Site Modal -->
+        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="coverage-site-form-modal">
+            <h3 id="coverage-site-form-title" class="text-xl font-bold p-4 border-b border-slate-700"></h3>
+            <input type="hidden" id="coverage-site-form-id">
+            <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input id="coverage-site-project" type="text" placeholder="المشروع" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                <input id="coverage-site-location" type="text" placeholder="الموقع" class="p-2 border bg-slate-700 border-slate-600 rounded-md">
+                <div class="sm:col-span-2">
+                     <label for="coverage-site-date" class="block text-sm font-medium text-gray-300 mb-1">التاريخ</label>
+                     <input id="coverage-site-date" type="date" class="p-2 w-full border bg-slate-700 border-slate-600 rounded-md">
+                </div>
+                 <div class="sm:col-span-2">
+                     <label for="coverage-site-day" class="block text-sm font-medium text-gray-300 mb-1">اليوم</label>
+                     <select id="coverage-site-day" class="filter-select">
+                        <option value="السبت">السبت</option>
+                        <option value="الأحد">الأحد</option>
+                        <option value="الإثنين">الإثنين</option>
+                        <option value="الثلاثاء">الثلاثاء</option>
+                        <option value="الأربعاء">الأربعاء</option>
+                        <option value="الخميس">الخميس</option>
+                        <option value="الجمعة">الجمعة</option>
+                     </select>
+                </div>
+                 <div>
+                     <label for="coverage-site-start-time" class="block text-sm font-medium text-gray-300 mb-1">من</label>
+                     <input id="coverage-site-start-time" type="time" class="p-2 w-full border bg-slate-700 border-slate-600 rounded-md">
+                </div>
+                 <div>
+                     <label for="coverage-site-end-time" class="block text-sm font-medium text-gray-300 mb-1">إلى</label>
+                     <input id="coverage-site-end-time" type="time" class="p-2 w-full border bg-slate-700 border-slate-600 rounded-md">
+                </div>
+                <div class="sm:col-span-2">
+                    <label for="coverage-site-payout" class="block text-sm font-medium text-gray-300 mb-1">المبلغ المستحق</label>
+                    <input id="coverage-site-payout" type="number" placeholder="المبلغ" class="p-2 w-full border bg-slate-700 border-slate-600 rounded-md">
+                </div>
+            </div>
+            <div class="p-4 bg-slate-900 flex justify-end gap-3">
+                <button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button>
+                <button id="submit-coverage-site-form-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">حفظ</button>
+            </div>
+        </div>
+
+        <!-- Add/Edit Staff Modal -->
         <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="staff-form-modal">
             <h3 id="staff-form-title" class="text-xl font-bold p-4 border-b border-slate-700"></h3>
             <input type="hidden" id="staff-form-id">
@@ -189,7 +299,8 @@
             </div>
         </div>
         
-         <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="financial-transaction-modal">
+         <!-- Financial Transaction Modal -->
+        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="financial-transaction-modal">
             <h3 id="financial-transaction-title" class="text-xl font-bold p-4 border-b border-slate-700"></h3>
             <div class="p-6 space-y-4">
                 <input type="hidden" id="financial-transaction-guard-id">
@@ -209,30 +320,107 @@
             </div>
         </div>
 
+        <!-- Schedule Display Modal -->
         <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="schedule-display-modal">
             <h3 id="schedule-modal-title" class="text-xl font-bold p-4 border-b border-slate-700">جدول الدوام</h3>
             <div id="schedule-modal-body" class="p-6"></div>
             <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button></div>
         </div>
         
-        <div class="modal-content flex-col w-full max-w-2xl bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="entitlement-details-modal">
-            <h3 id="entitlement-modal-title" class="text-xl font-bold p-4 border-b border-slate-700">تفاصيل المستحقات</h3>
-            <div id="entitlement-modal-body" class="p-6"></div>
-            <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button></div>
+        <!-- Coverage Application Notes Modal -->
+        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="coverage-notes-modal">
+              <h3 class="text-xl font-bold p-4 border-b border-slate-700">إضافة ملاحظات</h3>
+              <div class="p-6 space-y-4">
+                  <input type="hidden" id="coverage-notes-coverage-id">
+                  <label for="coverage-notes-textarea" class="block text-sm font-medium text-gray-300 mb-2">ملاحظات (اختياري، اتركه فارغاً إذا لم يكن هناك ملاحظات)</label>
+                  <textarea id="coverage-notes-textarea" rows="4" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea>
+              </div>
+              <div class="p-4 bg-slate-900 flex justify-end gap-3">
+                  <button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إلغاء</button>
+                  <button id="submit-coverage-notes-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">تأكيد التقديم</button>
+              </div>
         </div>
 
-        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="attendance-modal">
-             <h3 class="text-xl font-bold p-4 border-b border-slate-700">تسجيل الحضور</h3><div class="p-6 space-y-4"><label for="guard-notes" class="block">ملاحظات (اختياري)</label><textarea id="guard-notes" rows="4" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea></div>
-             <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button><button id="submit-attendance-btn" class="font-semibold bg-green-600 text-white px-4 py-2 rounded-lg transition hover:bg-green-700">تأكيد الحضور</button></div>
-        </div>
+        <!-- Guard Request Modals -->
         <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="leave-modal">
-             <h3 class="text-xl font-bold p-4 border-b border-slate-700">طلب إجازة</h3><div class="p-6 space-y-4"><label for="leave-days" class="block">عدد الأيام المطلوبة</label><input type="number" id="leave-days" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md" min="1"><label for="leave-reason" class="block">السبب</label><textarea id="leave-reason" rows="3" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea></div>
-             <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button><button id="submit-leave-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">إرسال الطلب</button></div>
+              <h3 class="text-xl font-bold p-4 border-b border-slate-700">طلب إجازة</h3><div class="p-6 space-y-4"><label for="leave-days" class="block">عدد الأيام المطلوبة</label><input type="number" id="leave-days" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md" min="1"><label for="leave-reason" class="block">السبب</label><textarea id="leave-reason" rows="3" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea></div>
+              <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button><button id="submit-leave-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">إرسال الطلب</button></div>
         </div>
         <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="loan-modal">
-             <h3 class="text-xl font-bold p-4 border-b border-slate-700">طلب سلفة</h3><div class="p-6 space-y-4"><label for="loan-amount" class="block">المبلغ المطلوب</label><input type="number" id="loan-amount" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md" min="1"><label for="loan-reason" class="block">السبب</label><textarea id="loan-reason" rows="3" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea></div>
-             <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button><button id="submit-loan-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">إرسال الطلب</button></div>
+              <h3 class="text-xl font-bold p-4 border-b border-slate-700">طلب سلفة</h3><div class="p-6 space-y-4"><label for="loan-amount" class="block">المبلغ المطلوب</label><input type="number" id="loan-amount" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md" min="1"><label for="loan-reason" class="block">السبب</label><textarea id="loan-reason" rows="3" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea></div>
+              <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button><button id="submit-loan-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">إرسال الطلب</button></div>
         </div>
+        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="permission-modal">
+              <h3 class="text-xl font-bold p-4 border-b border-slate-700">طلب استئذان</h3><div class="p-6 space-y-4"><label for="permission-reason" class="block">سبب الاستئذان</label><textarea id="permission-reason" rows="3" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea></div>
+              <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button><button id="submit-permission-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">إرسال الطلب</button></div>
+        </div>
+        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="overtime-modal">
+              <h3 class="text-xl font-bold p-4 border-b border-slate-700">طلب عمل إضافي</h3><div class="p-6 space-y-4"><label for="overtime-reason" class="block">تفاصيل العمل الإضافي المطلوب</label><textarea id="overtime-reason" rows="3" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea></div>
+              <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button><button id="submit-overtime-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">إرسال الطلب</button></div>
+        </div>
+        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="resignation-modal">
+              <h3 class="text-xl font-bold p-4 border-b border-slate-700">طلب استقالة</h3><div class="p-6 space-y-4"><label for="resignation-reason" class="block">سبب الاستقالة</label><textarea id="resignation-reason" rows="4" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea></div>
+              <div class="p-4 bg-slate-900 flex justify-end gap-3"><button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button><button id="submit-resignation-btn" class="font-semibold bg-red-600 text-white px-4 py-2 rounded-lg transition hover:bg-red-700">تقديم طلب الاستقالة</button></div>
+        </div>
+        
+        <!-- Guard Transfer Modal -->
+        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="transfer-request-modal">
+             <h3 class="text-xl font-bold p-4 border-b border-slate-700">رفع طلب نقل حارس</h3>
+             <div class="p-6 space-y-4">
+                 <div>
+                     <label for="transfer-guard-select" class="block text-sm font-medium text-gray-300 mb-2">اختر الحارس</label>
+                     <select id="transfer-guard-select" class="filter-select"></select>
+                 </div>
+                 <div>
+                     <label for="transfer-new-location" class="block text-sm font-medium text-gray-300 mb-2">الموقع الجديد</label>
+                     <input type="text" id="transfer-new-location" class="p-2 w-full border bg-slate-700 border-slate-600 rounded-md">
+                 </div>
+                  <div>
+                     <label for="transfer-new-project" class="block text-sm font-medium text-gray-300 mb-2">المشروع الجديد</label>
+                     <input type="text" id="transfer-new-project" class="p-2 w-full border bg-slate-700 border-slate-600 rounded-md">
+                 </div>
+                  <div>
+                     <label for="transfer-reason" class="block text-sm font-medium text-gray-300 mb-2">سبب النقل</label>
+                     <textarea id="transfer-reason" rows="3" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea>
+                 </div>
+             </div>
+             <div class="p-4 bg-slate-900 flex justify-end gap-3">
+                 <button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button>
+                 <button id="submit-transfer-request-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">إرسال الطلب</button>
+             </div>
+        </div>
+
+        <!-- Rejection Reason Modal -->
+        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="rejection-reason-modal">
+             <h3 class="text-xl font-bold p-4 border-b border-slate-700">سبب الرفض</h3>
+             <div class="p-6 space-y-4">
+                 <input type="hidden" id="rejection-item-id">
+                 <input type="hidden" id="rejection-table-name">
+                  <div>
+                     <label for="rejection-reason-input" class="block text-sm font-medium text-gray-300 mb-2">يرجى ذكر سبب رفض الطلب</label>
+                     <textarea id="rejection-reason-input" rows="4" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea>
+                 </div>
+             </div>
+             <div class="p-4 bg-slate-900 flex justify-end gap-3">
+                 <button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إلغاء</button>
+                 <button id="submit-rejection-btn" class="font-semibold bg-red-600 text-white px-4 py-2 rounded-lg transition hover:bg-red-700">تأكيد الرفض</button>
+             </div>
+        </div>
+        
+        <!-- *** NEW: Added Missing Attendance Modal *** -->
+        <div class="modal-content flex-col w-full max-w-lg bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="attendance-modal">
+            <h3 class="text-xl font-bold p-4 border-b border-slate-700">تسجيل حضور</h3>
+            <div class="p-6 space-y-4">
+                <label for="guard-notes" class="block">ملاحظات (اختياري)</label>
+                <textarea id="guard-notes" rows="3" class="w-full p-2 border bg-slate-700 border-slate-600 rounded-md"></textarea>
+            </div>
+            <div class="p-4 bg-slate-900 flex justify-end gap-3">
+                <button class="modal-close-btn font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">إغلاق</button>
+                <button id="submit-attendance-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">تأكيد الحضور</button>
+            </div>
+        </div>
+
+        <!-- Universal Modals -->
         <div class="modal-content flex-col w-full max-w-sm bg-slate-800 text-white border border-slate-700 rounded-lg shadow-xl" id="confirm-modal">
             <h3 id="confirm-title" class="text-xl font-bold p-4">تأكيد الإجراء</h3><p id="confirm-message" class="p-6 text-lg"></p><div class="p-4 bg-slate-900 flex justify-end gap-3"><button id="confirm-cancel-btn" class="font-semibold bg-slate-600 text-white px-4 py-2 rounded-lg transition hover:bg-slate-500">لا</button><button id="confirm-ok-btn" class="font-semibold bg-red-600 text-white px-4 py-2 rounded-lg transition hover:bg-red-700">نعم</button></div>
         </div>
@@ -244,12 +432,6 @@
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         const runApp = async () => {
-            // --- IMPORTANT: DATABASE SETUP ---
-            // 'guards' table: mobile_number (text), weekly_schedule (jsonb), transport_allowance (numeric)
-            // 'attendance' table: checkout_at (timestamptz), work_duration (text), daily_entitlement (numeric), checkin_location(text), checkout_location(text)
-            // 'staff' table: id(pk, auto), name(text), username(text, unique), password(text), role(text), job_title(text, nullable), assignments(jsonb)
-            // NEW TABLE 'financial_transactions': id, guard_id, type, amount, reason, created_by, created_at
-            // ---------------------------------
             const SUPABASE_URL = 'https://tlgyxbdjdhdjgkcndxoi.supabase.co';
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZ3l4YmRqZGhkamdrY25keG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwOTU4NzMsImV4cCI6MjA2NTY3MTg3M30.fX6ek2_xIdSzu_71cmsXWweZXP6cSeFlv8NTlVFKzZg';
             const { createClient } = supabase;
@@ -257,9 +439,24 @@
 
             let state = { currentGuard: null, currentUser: null, currentRole: null, allGuardsData: [], allStaffData: [], activeAttendanceId: null, allLeaveRequests: [] };
             const dom = {
-                pages: document.querySelectorAll('.page'), loading: document.getElementById('loading-overlay'), alertModal: document.getElementById('alert-modal'), alertMessage: document.getElementById('alert-message'), modalContainer: document.getElementById('modal-container'), modalContents: document.querySelectorAll('.modal-content'), loginTitle: document.getElementById('login-title'), guardNameDisplay: document.getElementById('guard-name-display'), adminDashboardTitle: document.getElementById('admin-dashboard-title'), adminTableContainer: document.getElementById('admin-table-container'), hrTabs: document.getElementById('hr-tabs'), hrTabContent: document.getElementById('hr-tab-content'), checkInBtn: document.getElementById('check-in-btn'), checkOutBtn: document.getElementById('check-out-btn'),
+                pages: document.querySelectorAll('.page'), 
+                loading: document.getElementById('loading-overlay'), 
+                alertModal: document.getElementById('alert-modal'), 
+                alertMessage: document.getElementById('alert-message'), 
+                modalContainer: document.getElementById('modal-container'), 
+                modalContents: document.querySelectorAll('.modal-content'), 
+                loginTitle: document.getElementById('login-title'), 
+                guardNameDisplay: document.getElementById('guard-name-display'), 
+                coverageGuardNameDisplay: document.getElementById('coverage-guard-name-display'),
+                adminDashboardTitle: document.getElementById('admin-dashboard-title'), 
+                adminTabContent: document.getElementById('admin-tab-content'), 
+                hrTabs: document.getElementById('hr-tabs'), 
+                hrTabContent: document.getElementById('hr-tab-content'), 
+                checkInBtn: document.getElementById('check-in-btn'), 
+                checkOutBtn: document.getElementById('check-out-btn'),
+                coverageGuardTabs: document.getElementById('coverage-guard-tabs'),
+                coverageGuardTabContent: document.getElementById('coverage-guard-tab-content'),
                 scheduleModal: { title: document.getElementById('schedule-modal-title'), body: document.getElementById('schedule-modal-body') },
-                entitlementModal: { title: document.getElementById('entitlement-modal-title'), body: document.getElementById('entitlement-modal-body') },
                 confirmModal: { title: document.getElementById('confirm-title'), message: document.getElementById('confirm-message'), okBtn: document.getElementById('confirm-ok-btn'), cancelBtn: document.getElementById('confirm-cancel-btn') }
             };
 
@@ -271,95 +468,32 @@
             const confirmAction = (title, message) => { return new Promise((resolve) => { dom.confirmModal.title.textContent = title; dom.confirmModal.message.textContent = message; showModal('confirm-modal'); dom.confirmModal.okBtn.onclick = () => { closeModal(); resolve(true); }; dom.confirmModal.cancelBtn.onclick = () => { closeModal(); resolve(false); }; }); };
             const logActivity = async (actor, action, details = '') => { await _supabase.from('activity_log').insert({ actor, action, details }); };
             const formatDuration = (ms) => { if (ms < 0) ms = 0; const s = Math.floor(ms / 1000); const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`; };
-            const parseDuration = (durationStr) => {
-                if (!durationStr || typeof durationStr !== 'string') return 0;
-                const parts = durationStr.split(':');
-                if (parts.length !== 3) return 0;
-                const [hours, minutes, seconds] = parts.map(Number);
-                return (hours * 3600 + minutes * 60 + seconds) * 1000;
-            };
-            const addAssignmentRow = (assignment = {}) => {
-                const assignmentsList = document.getElementById('staff-form-assignments-list');
-                const newRow = document.createElement('div');
-                newRow.className = 'assignment-row grid grid-cols-1 sm:grid-cols-4 gap-2 items-center';
-
-                const regions = [...new Set(state.allGuardsData.map(i => i.region).filter(Boolean))];
-                const locations = [...new Set(state.allGuardsData.map(i => i.location).filter(Boolean))];
-                const projects = [...new Set(state.allGuardsData.map(i => i.project).filter(Boolean))];
-
-                newRow.innerHTML = `
-                    <select data-type="region" class="filter-select col-span-1">${['<option value="">المنطقة (الكل)</option>', ...regions.map(o => `<option value="${o}" ${assignment.region === o ? 'selected' : ''}>${o}</option>`)].join('')}</select>
-                    <select data-type="location" class="filter-select col-span-1">${['<option value="">الموقع (الكل)</option>', ...locations.map(o => `<option value="${o}" ${assignment.location === o ? 'selected' : ''}>${o}</option>`)].join('')}</select>
-                    <select data-type="project" class="filter-select col-span-1">${['<option value="">المشروع (الكل)</option>', ...projects.map(o => `<option value="${o}" ${assignment.project === o ? 'selected' : ''}>${o}</option>`)].join('')}</select>
-                    <button type="button" class="remove-assignment-btn action-btn bg-red-600 hover:bg-red-700 col-span-1"><i class="ph ph-trash"></i></button>
-                `;
-                
-                newRow.querySelector('.remove-assignment-btn').addEventListener('click', () => {
-                    newRow.remove();
-                });
-
-                assignmentsList.appendChild(newRow);
-            };
-
-            const calculateEntitlement = (guardId, workDurationMs) => {
-                const guard = state.allGuardsData.find(g => g.id.toString() === guardId.toString());
+            
+            const calculateEntitlement = (guard, workDurationMs) => {
                 if (!guard) return 0;
                 const totalSalary = (guard.basic_salary || 0) + (guard.housing_allowance || 0) + (guard.transport_allowance || 0) + (guard.other_allowances || 0);
                 if (totalSalary === 0) return 0;
                 const dailyRate = totalSalary / 30;
                 const hourlyRate = dailyRate / 8; // Standard 8-hour day
                 const workHours = workDurationMs / (1000 * 60 * 60);
-                if (workHours >= 8) {
-                    return parseFloat(dailyRate.toFixed(2));
-                } else {
-                    const entitlement = workHours * hourlyRate;
-                    return parseFloat(entitlement.toFixed(2));
-                }
+                const entitlement = workHours * hourlyRate;
+                return parseFloat(entitlement.toFixed(2));
             };
 
-            const getCurrentLocation = () => {
-                return new Promise((resolve, reject) => {
-                    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-                        return reject(new Error('يجب استخدام اتصال آمن (HTTPS) لطلب الموقع.'));
-                    }
-                    if (!navigator.geolocation) {
-                        return reject(new Error('المتصفح لا يدعم خدمة تحديد المواقع.'));
-                    }
-                    showLoading(true);
-                    navigator.geolocation.getCurrentPosition(
-                        (position) => {
-                            showLoading(false);
-                            resolve(`${position.coords.latitude},${position.coords.longitude}`);
-                        },
-                        (error) => {
-                            showLoading(false);
-                            let message = "لا يمكن الحصول على الموقع. ";
-                            switch (error.code) {
-                                case error.PERMISSION_DENIED:
-                                    message = "لقد رفضت طلب الوصول للموقع. يرجى تمكين الصلاحية من إعدادات المتصفح والجهاز.";
-                                    break;
-                                case error.POSITION_UNAVAILABLE:
-                                    message = "معلومات الموقع غير متاحة حالياً. حاول مرة أخرى.";
-                                    break;
-                                case error.TIMEOUT:
-                                    message = "انتهت مهلة طلب تحديد الموقع. حاول مرة أخرى.";
-                                    break;
-                                default:
-                                    message = "حدث خطأ غير معروف أثناء طلب الموقع.";
-                                    break;
-                            }
-                            reject(new Error(message));
-                        },
-                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-                    );
-                });
-            };
-            
             const fetchAllGuards = async () => {
                 const { data, error } = await _supabase.from('guards').select('*');
-                if (error) { console.error("Failed to fetch guards data:", error); showAlert("فشل تحميل بيانات الحراس."); return; }
+                if (error) { console.error("Failed to fetch guards data:", error); showAlert("فشل تحميل بيانات الحراس."); return []; }
                 state.allGuardsData = data;
+                return data;
             };
+
+            const fetchAllStaff = async () => {
+                const { data, error } = await _supabase.from('staff').select('*');
+                if (error) { console.error("Failed to fetch staff data:", error); showAlert("فشل تحميل بيانات الموظفين."); return []; }
+                state.allStaffData = data;
+                return data;
+            };
+
              const fetchAllLeaveRequests = async () => {
                 const { data, error } = await _supabase.from('leave_requests').select('*').eq('status', 'Approved');
                 if (error) { console.error("Failed to fetch leave requests:", error); return; }
@@ -371,9 +505,10 @@
                 today.setHours(0,0,0,0);
                 const activeLeave = state.allLeaveRequests.find(leave => {
                     const startDate = new Date(leave.created_at);
+                    startDate.setHours(0,0,0,0);
                     const endDate = new Date(startDate);
                     endDate.setDate(startDate.getDate() + leave.days_requested);
-                    return leave.guardId === guardId && today >= startDate && today <= endDate;
+                    return leave.guard_id === guardId && today >= startDate && today < endDate;
                 });
                 
                 if (activeLeave) {
@@ -384,129 +519,403 @@
                 return { onLeave: false };
             }
 
-
             const updateGuardButtonState = async (guardId) => {
                 const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0); const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
-                const { data, error } = await _supabase.from('attendance').select('id, checkout_at').eq('guardId', guardId).gte('created_at', todayStart.toISOString()).lte('created_at', todayEnd.toISOString()).is('checkout_at', null).order('created_at', { ascending: false }).limit(1);
+                const { data, error } = await _supabase.from('attendance').select('id, checkout_at').eq('guard_id', guardId).gte('created_at', todayStart.toISOString()).lte('created_at', todayEnd.toISOString()).is('checkout_at', null).order('created_at', { ascending: false }).limit(1);
                 if (error || !data || data.length === 0) { dom.checkInBtn.disabled = false; dom.checkOutBtn.disabled = true; state.activeAttendanceId = null; }
                 else { dom.checkInBtn.disabled = true; dom.checkOutBtn.disabled = false; state.activeAttendanceId = data[0].id; }
             };
-
+            
             const renderTable = (container, columns, data) => {
                 if (!container) return;
-                let tableHTML = `<table class="w-full text-right text-sm text-gray-300">
-                    <thead class="bg-slate-700 text-xs uppercase"><tr>`;
+                let tableHTML = `<div class="table-container"><table class="w-full text-right text-sm text-gray-300">
+                                        <thead class="bg-slate-700 text-xs uppercase"><tr>`;
                 columns.forEach(col => tableHTML += `<th class="p-3 font-bold text-gray-300">${col.header}</th>`);
                 tableHTML += `</tr></thead><tbody class="divide-y divide-slate-700">`;
                 if (!data || data.length === 0) { tableHTML += `<tr><td colspan="${columns.length}" class="text-center p-8 text-gray-400">لا توجد بيانات لعرضها.</td></tr>`; }
-                else { data.forEach(row => { let rowClass = row.status === 'Approved' ? 'bg-green-500/10' : (row.status === 'Rejected' || row.status === 'Cancelled' ? 'bg-red-500/10' : ''); tableHTML += `<tr id="row-${row.id}" class="${rowClass} hover:bg-slate-700/50 transition-colors duration-300">`; columns.forEach(col => { tableHTML += `<td class="p-3 break-words align-middle">${col.render(row)}</td>`; }); tableHTML += `</tr>`; }); }
-                tableHTML += `</tbody></table>`; container.innerHTML = tableHTML;
+                else { data.forEach(row => { let rowClass = row.status === 'Approved' ? 'bg-green-500/10' : (row.status === 'Rejected' || row.status === 'Cancelled by HR' ? 'bg-red-500/10' : ''); tableHTML += `<tr id="row-${row.id}" class="${rowClass} hover:bg-slate-700/50 transition-colors duration-300">`; columns.forEach(col => { tableHTML += `<td class="p-3 break-words align-middle">${col.render(row)}</td>`; }); tableHTML += `</tr>`; }); }
+                tableHTML += `</tbody></table></div>`; container.innerHTML = tableHTML;
+            };
+
+              // --- NEW: Coverage Guard Dashboard ---
+            const loadCoverageGuardDashboard = async (initialTab = 'available_coverages') => {
+                showPage('coverage-guard-dashboard-page');
+                dom.coverageGuardNameDisplay.textContent = state.currentGuard.name;
+
+                const loadTabData = async (tab) => {
+                    showLoading(true);
+                    if (dom.coverageGuardTabs) {
+                        dom.coverageGuardTabs.querySelectorAll('.custom-tab').forEach(t => t.classList.remove('active-tab'));
+                        dom.coverageGuardTabs.querySelector(`.custom-tab[data-tab="${tab}"]`)?.classList.add('active-tab');
+                    }
+                    const contentContainer = dom.coverageGuardTabContent;
+                    if (!contentContainer) { showLoading(false); return; }
+                    contentContainer.innerHTML = '';
+                    let error;
+
+                    if (tab === 'available_coverages') {
+                        const { data: coverages, error: covError } = await _supabase.from('coverages').select('*').eq('status', 'Available').order('coverage_date');
+                        const { data: applications, error: appError } = await _supabase.from('coverage_applications').select('coverage_id').eq('guard_id', state.currentGuard.id);
+                        error = covError || appError;
+                        
+                        if (error) {
+                            showAlert('فشل تحميل التغطيات المتاحة.');
+                        } else if (!coverages || coverages.length === 0) {
+                            contentContainer.innerHTML = '<p class="text-center p-8 text-gray-400">لا توجد تغطيات متاحة حالياً.</p>';
+                        } else {
+                            const appliedCoverageIds = new Set(applications.map(app => app.coverage_id));
+                            const cardsHTML = coverages.map(c => {
+                                const hasApplied = appliedCoverageIds.has(c.id);
+                                const shiftInfo = c.shift_details || `${c.shift_day} (${c.shift_start} - ${c.shift_end})`;
+                                return `
+                                <div class="coverage-card">
+                                    <div class="flex-grow">
+                                        <h3 class="text-lg font-bold text-white">${c.project} - ${c.location}</h3>
+                                        <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-300 mt-2">
+                                            <span><i class="ph-fill ph-calendar-blank"></i> ${new Date(c.coverage_date).toLocaleDateString('ar-SA')}</span>
+                                            <span><i class="ph-fill ph-clock"></i> ${shiftInfo}</span>
+                                            <span class="font-bold text-green-400"><i class="ph-fill ph-money"></i> ${c.payout_amount} ريال</span>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        class="action-btn mt-3 sm:mt-0 ${hasApplied ? 'bg-gray-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} apply-for-coverage-btn" 
+                                        data-coverage-id="${c.id}" 
+                                        ${hasApplied ? 'disabled' : ''}>
+                                        <i class="ph ph-paper-plane-tilt"></i> ${hasApplied ? 'تم التقديم' : 'تقديم'}
+                                    </button>
+                                </div>`;
+                            }).join('');
+                            contentContainer.innerHTML = `<div class="space-y-4">${cardsHTML}</div>`;
+                        }
+                    } else if (tab === 'my_coverages') {
+                        const { data, error: myCovError } = await _supabase
+                            .from('coverages')
+                            .select('*')
+                            .eq('assigned_guard_id', state.currentGuard.id)
+                            .order('coverage_date');
+                        error = myCovError;
+
+                        if (error) {
+                             showAlert('فشل تحميل تغطياتك.');
+                        } else if (!data || data.length === 0) {
+                            contentContainer.innerHTML = '<p class="text-center p-8 text-gray-400">لم يتم قبولك في أي تغطية بعد.</p>';
+                        } else {
+                            const cardsHTML = data.map(c => {
+                                const shiftInfo = c.shift_details || `${c.shift_day} (${c.shift_start} - ${c.shift_end})`;
+                                return `
+                                <div class="coverage-card bg-slate-700/50">
+                                    <div>
+                                        <h3 class="text-lg font-bold text-white">${c.project} - ${c.location}</h3>
+                                        <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-300 mt-2">
+                                            <span><i class="ph-fill ph-calendar-check"></i> ${new Date(c.coverage_date).toLocaleDateString('ar-SA')}</span>
+                                            <span><i class="ph-fill ph-clock"></i> ${shiftInfo}</span>
+                                            <span class="font-bold text-green-400"><i class="ph-fill ph-money"></i> ${c.payout_amount} ريال</span>
+                                        </div>
+                                    </div>
+                                    <span class="font-bold text-green-400">مقبول</span>
+                                </div>`;
+                            }).join('');
+                             contentContainer.innerHTML = `<div class="space-y-4">${cardsHTML}</div>`;
+                        }
+                    }
+                    showLoading(false);
+                };
+                
+                if (dom.coverageGuardTabs) {
+                    dom.coverageGuardTabs.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const tabLink = e.target.closest('.custom-tab');
+                        if (tabLink) {
+                            loadTabData(tabLink.dataset.tab);
+                        }
+                    });
+                }
+                loadTabData(initialTab);
             };
             
-            const loadAdminDashboard = async () => {
+            const loadAdminDashboard = async (initialTab = 'attendance') => {
                 showPage('admin-dashboard-page');
-                dom.adminDashboardTitle.textContent = {admin: 'لوحة تحكم المشرف', operations: 'لوحة تحكم العمليات'}[state.currentRole];
-                showLoading(true);
-                await fetchAllGuards();
-                let query = _supabase.from('attendance').select('*').order('created_at', { ascending: false });
-
-                if (state.currentUser && state.currentUser.name !== 'Super Admin' && state.currentUser.assignments && state.currentUser.assignments.length > 0) {
-                     const supervisedGuardIds = state.allGuardsData.filter(g => {
-                        return state.currentUser.assignments.some(a => 
-                             (!a.region || g.region === a.region) &&
-                             (!a.location || g.location === a.location) &&
-                             (!a.project || g.project === a.project)
-                        );
-                     }).map(g => g.id);
-                    query = query.in('guardId', supervisedGuardIds.length > 0 ? supervisedGuardIds : ['']); // Prevent error if array is empty
+                const role = state.currentRole;
+                dom.adminDashboardTitle.textContent = {admin: 'لوحة تحكم المشرف', operations: 'لوحة تحكم العمليات'}[role];
+                
+                const adminHeaderActions = document.getElementById('admin-header-actions');
+                adminHeaderActions.innerHTML = ''; 
+                if (role === 'admin') {
+                     adminHeaderActions.insertAdjacentHTML('afterbegin', `<button id="transfer-request-btn" class="header-btn bg-purple-600 hover:bg-purple-700">رفع نقل حارس</button>`);
                 }
+                 adminHeaderActions.insertAdjacentHTML('beforeend', `<button id="admin-export-csv-btn" class="header-btn bg-blue-600 hover:bg-blue-700">تصدير CSV</button>
+                                                                         <button class="logout-btn header-btn bg-red-600 hover:bg-red-700">تسجيل الخروج</button>`);
+
+                const tabsContainer = document.getElementById('admin-ops-tabs');
+                tabsContainer.innerHTML = '';
+                const availableTabs = {
+                    attendance: { label: 'الحضور اليومي', roles: ['admin', 'operations'] },
+                    permissions: { label: 'طلبات الإستئذان', roles: ['admin', 'operations'] },
+                    overtime: { label: 'طلبات العمل الإضافي', roles: ['admin', 'operations'] },
+                    transfers: { label: 'طلبات النقل', roles: ['operations'] }
+                };
+                Object.entries(availableTabs).forEach(([key, tabInfo]) => {
+                    if (tabInfo.roles.includes(role)) {
+                        tabsContainer.innerHTML += `<a href="#" data-tab="${key}" class="custom-tab">${tabInfo.label}</a>`;
+                    }
+                });
                 
-                const { data, error } = await query;
-                showLoading(false);
-                if(error) return showAlert('فشل تحميل السجلات.');
+                const loadTabData = async (tab) => {
+                    showLoading(true);
+                    document.querySelectorAll('#admin-ops-tabs .custom-tab').forEach(t => t.classList.remove('active-tab'));
+                    document.querySelector(`#admin-ops-tabs .custom-tab[data-tab="${tab}"]`)?.classList.add('active-tab');
+                    const contentContainer = dom.adminTabContent;
+                    contentContainer.innerHTML = '';
+                    let columns, data, error;
+                    await fetchAllGuards();
+                    await fetchAllStaff();
+                    
+                    const tableId = `admin-table-${tab}`;
+                    contentContainer.innerHTML = `<div id="${tableId}"></div>`;
+                    const tableContainer = contentContainer.querySelector(`#${tableId}`);
+                    document.getElementById('admin-export-csv-btn').dataset.targetTable = `#${tableId} table`;
+
+
+                    switch(tab) {
+                        case 'attendance':
+                            ({ data, error } = await _supabase.from('attendance').select('*').order('created_at', { ascending: false }));
+                            const fullData = data.map(att => ({ ...att, guard: state.allGuardsData.find(g => g.id === att.guard_id) }));
+                            columns = [
+                                { header: 'اسم الحارس', render: r => r.guard_name },
+                                { header: 'الموقع', render: r => r.guard?.location || '-' },
+                                { header: 'المشروع', render: r => r.guard?.project || '-' },
+                                { header: 'الوردية', render: r => {
+                                    if (!r.guard?.weekly_schedule) return 'لا يوجد جدول';
+                                    const today = new Date(r.created_at).toLocaleString('en-US', {weekday: 'long'}).toLowerCase();
+                                    const shift = r.guard.weekly_schedule[today];
+                                    if (!shift || !shift.start) return 'راحة';
+                                    const formatTime = (time) => new Date(`1970-01-01T${time}`).toLocaleTimeString('ar-SA', {hour: '2-digit', minute:'2-digit', hour12: true});
+                                    return `${formatTime(shift.start)} - ${formatTime(shift.end)}`;
+                                }},
+                                { header: 'وقت الحضور', render: r => new Date(r.created_at).toLocaleString('ar-SA') },
+                                { header: 'الحالة', render: r => {
+                                    if (!r.checkout_at) {
+                                        return `<div class="flex items-center gap-2"><span class="on-duty-status">في موقع العمل</span> 
+                                                  <button class="action-btn bg-yellow-600 hover:bg-yellow-700 supervisor-checkout-btn" data-attendance-id="${r.id}" data-guard-id="${r.guard_id}">
+                                                      <i class="ph ph-sign-out"></i> خروج
+                                                  </button>
+                                                </div>`;
+                                    }
+                                    return `<span>تم الانصراف (${r.work_duration})</span>`;
+                                }},
+                                { header: 'الإجراء', render: r => {
+                                      const statusMap = { Approved: 'معتمد', Cancelled: 'ملغي' };
+                                      if(statusMap[r.status]) {
+                                          let button = '';
+                                          if (role === 'operations') {
+                                              button = `<button class="action-btn bg-orange-600 hover:bg-orange-700 modify-attendance-btn" data-id="${r.id}"><i class="ph ph-pencil-simple"></i> تعديل</button>`
+                                          }
+                                          return `<div class="flex items-center gap-2"><span class="font-bold ${r.status === 'Approved' ? 'text-green-400' : 'text-red-400'}">${statusMap[r.status]}</span> ${button}</div>
+                                                  <span class="text-xs text-gray-400 block">بواسطة: ${r.action_by || '-'}</span>`;
+                                      }
+                                      return `<div class="flex gap-2">
+                                                  <button class="action-btn bg-green-600 hover:bg-green-700 approve-attendance-btn" data-id="${r.id}"><i class="ph ph-check-circle"></i> اعتماد</button>
+                                                  <button class="action-btn bg-red-600 hover:bg-red-700 cancel-attendance-btn" data-id="${r.id}"><i class="ph ph-x-circle"></i> إلغاء</button>
+                                                </div>`;
+                                }}
+                            ];
+                            renderTable(tableContainer, columns, fullData);
+                            break;
+                        
+                        case 'permissions':
+                        case 'overtime':
+                            const requestType = tab === 'permissions' ? 'permission_requests' : 'overtime_requests';
+                            ({ data, error } = await _supabase.from(requestType).select('*').order('created_at', { ascending: false }));
+                             columns = [
+                                { header: 'اسم الحارس', render: r => r.guard_name },
+                                { header: 'السبب', render: r => r.reason },
+                                { header: 'تاريخ الطلب', render: r => new Date(r.created_at).toLocaleString('ar-SA') },
+                                { header: 'الحالة', render: r => {
+                                    if(r.status !== 'Pending') {
+                                        return `<span class="font-bold ${r.status === 'Approved' ? 'text-green-400' : 'text-red-400'}">${r.status === 'Approved' ? 'معتمد' : 'مرفوض'}</span>
+                                                <span class="text-xs text-gray-400 block">بواسطة: ${r.processed_by || '-'}</span>`;
+                                    }
+                                    if(['admin', 'operations'].includes(role)) {
+                                       return `<div class="flex gap-2">
+                                                   <button class="action-btn bg-green-600 hover:bg-green-700 approve-request-btn" data-id="${r.id}" data-type="${requestType}"><i class="ph ph-check"></i> موافقة</button>
+                                                   <button class="action-btn bg-red-600 hover:bg-red-700 reject-request-btn" data-id="${r.id}" data-type="${requestType}"><i class="ph ph-x"></i> رفض</button>
+                                               </div>`;
+                                    }
+                                    return '<span class="text-yellow-400">معلق</span>';
+                                }}
+                            ];
+                            renderTable(tableContainer, columns, data);
+                            break;
+                        
+                        case 'transfers': // Operations only
+                             ({ data, error } = await _supabase.from('transfer_requests').select('*').order('created_at', { ascending: false }));
+                             columns = [
+                                { header: 'اسم الحارس', render: r => r.guard_name },
+                                { header: 'من مشروع', render: r => r.current_project },
+                                { header: 'إلى موقع', render: r => r.new_location },
+                                { header: 'إلى مشروع', render: r => r.new_project },
+                                { header: 'السبب', render: r => r.reason },
+                                { header: 'مقدم الطلب', render: r => r.from_supervisor_name },
+                                { header: 'الحالة', render: r => {
+                                    if(r.status !== 'Pending') {
+                                        return `<span class="font-bold ${r.status === 'Approved' ? 'text-green-400' : 'text-red-400'}">${r.status === 'Approved' ? 'معتمد' : 'مرفوض'}</span>
+                                                <span class="text-xs text-gray-400 block">بواسطة: ${r.processed_by || '-'}</span>
+                                                ${r.rejection_reason ? `<span class="text-xs text-red-300 block">سبب الرفض: ${r.rejection_reason}</span>` : ''}
+                                                `;
+                                    }
+                                    return `<div class="flex gap-2">
+                                                <button class="action-btn bg-green-600 hover:bg-green-700 approve-transfer-btn" data-id="${r.id}" data-guard-id="${r.guard_id}" data-location="${r.new_location}" data-project="${r.new_project}"><i class="ph ph-check"></i> موافقة</button>
+                                                <button class="action-btn bg-red-600 hover:bg-red-700 reject-request-btn" data-id="${r.id}" data-type="transfer_requests"><i class="ph ph-x"></i> رفض</button>
+                                            </div>`;
+                                }}
+                             ];
+                             renderTable(tableContainer, columns, data);
+                             break;
+
+                    }
+                    if(error) showAlert('فشل تحميل البيانات.');
+                    showLoading(false);
+                };
                 
-                const columns = [
-                    { header: 'اسم الحارس', render: r => r.guardName },
-                    { header: 'لوكيشن الحضور', render: r => r.checkin_location ? `<a href="https://maps.google.com/?q=${r.checkin_location}" target="_blank" class="text-blue-400 hover:underline">عرض الخريطة</a>` : '-' },
-                    { header: 'مدة العمل / الحالة', render: r => {
-                        if (!r.checkout_at) {
-                            let supervisorBtn = '';
-                            if (['admin', 'operations'].includes(state.currentRole)) {
-                                supervisorBtn = `<button class="action-btn bg-yellow-600 hover:bg-yellow-700 supervisor-checkout-btn" data-attendance-id="${r.id}" data-guard-id="${r.guardId}"><i class="ph ph-sign-out"></i> خروج</button>`;
-                            }
-                            return `<div class="flex items-center gap-2"><span class="on-duty-status">في موقع العمل الآن</span> ${supervisorBtn}</div>`;
-                        }
-                        return r.work_duration || '-';
-                    }},
-                    { header: 'لوكيشن الانصراف', render: r => r.checkout_location ? `<a href="https://maps.google.com/?q=${r.checkout_location}" target="_blank" class="text-blue-400 hover:underline">عرض الخريطة</a>` : '-' },
-                    { header: 'الإجراءات', render: r => {
-                        const statusMap = { Approved: { text: 'معتمد', color: 'text-green-400' }, Cancelled: { text: 'ملغي', color: 'text-red-400' }};
-                        const currentStatus = statusMap[r.status];
-                        if (currentStatus) { 
-                            const button = state.currentRole === 'operations' ? `<button class="action-btn bg-orange-600 hover:bg-orange-700 modify-btn" data-id="${r.id}" data-guard-name="${r.guardName}" data-old-status="${currentStatus.text}"><i class="ph ph-pencil-simple"></i> تعديل</button>` : ''; 
-                            return `<div class="flex items-center gap-2"><span class="${currentStatus.color} font-bold">${currentStatus.text}</span> ${button}</div>`; 
-                        }
-                        return `<div class="flex gap-2">
-                                    <button class="action-btn bg-green-600 hover:bg-green-700 approve-btn" data-id="${r.id}" data-guard-name="${r.guardName}"><i class="ph ph-check-circle"></i> اعتماد</button>
-                                    <button class="action-btn bg-red-600 hover:bg-red-700 cancel-btn" data-id="${r.id}" data-guard-name="${r.guardName}"><i class="ph ph-x-circle"></i> إلغاء</button>
-                                </div>`;
-                    }}
-                ];
-                renderTable(dom.adminTableContainer, columns, data);
+                tabsContainer.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const tabLink = e.target.closest('.custom-tab');
+                    if (tabLink) {
+                        loadTabData(tabLink.dataset.tab);
+                    }
+                });
+
+                // Load initial tab
+                loadTabData(initialTab);
             };
 
             const loadHrDashboard = async (tab = 'guards') => {
                 showPage('hr-dashboard-page'); showLoading(true);
-                dom.hrTabs.querySelectorAll('.hr-tab').forEach(t => t.classList.remove('active-tab'));
-                dom.hrTabs.querySelector(`.hr-tab[data-tab="${tab}"]`)?.classList.add('active-tab');
+                dom.hrTabs.querySelectorAll('.custom-tab').forEach(t => t.classList.remove('active-tab'));
+                dom.hrTabs.querySelector(`.custom-tab[data-tab="${tab}"]`)?.classList.add('active-tab');
                 let columns, data, error, container = dom.hrTabContent; container.innerHTML = '';
                 await fetchAllGuards();
                 await fetchAllLeaveRequests();
+                await fetchAllStaff();
+
+                const tableId = `hr-table-${tab}`;
+                const hasAddButton = ['guards', 'hr_staff', 'supervisors', 'operations', 'coverage_recruitment', 'coverage_sites'].includes(tab);
+                let addButtonHTML = '';
+                if(hasAddButton) {
+                    const btnInfo = {
+                        guards: { id: 'add-guard-btn', text: 'إضافة حارس جديد' },
+                        hr_staff: { id: 'add-staff-btn', text: 'إضافة موظف موارد بشرية', role: 'hr' },
+                        supervisors: { id: 'add-staff-btn', text: 'إضافة مشرف', role: 'admin' },
+                        operations: { id: 'add-staff-btn', text: 'إضافة موظف عمليات', role: 'operations' },
+                        coverage_recruitment: { id: 'add-coverage-guard-btn', text: 'إضافة حارس تغطية' },
+                        coverage_sites: { id: 'add-coverage-site-btn', text: 'إنشاء تغطية جديدة' },
+                    };
+                    addButtonHTML = `<div class="mb-4"><button id="${btnInfo[tab].id}" data-role="${btnInfo[tab].role || ''}" class="header-btn bg-blue-600 hover:bg-blue-700">${btnInfo[tab].text}</button></div>`;
+                }
+                 container.innerHTML = `${addButtonHTML}<div id="${tableId}"></div>`;
+                 const tableContainer = container.querySelector(`#${tableId}`);
+                 document.getElementById('hr-export-csv-btn').dataset.targetTable = `#${tableId} table`;
                 
                 switch(tab) {
                     case 'guards':
                         data = state.allGuardsData;
-                        container.innerHTML = `<div class="mb-4"><button id="add-guard-btn" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">إضافة حارس جديد</button></div>
-                                              <div id="guards-filters" class="p-4 grid grid-cols-1 md:grid-cols-5 gap-4 items-end bg-slate-800/50 rounded-lg mb-4">
-                                                  </div>
-                                              <div id="hr-guards-table"></div>`;
-                        const guardsFiltersEl = container.querySelector('#guards-filters');
-                        guardsFiltersEl.innerHTML = `<div><label for="search-name" class="block mb-2 text-sm font-medium text-gray-300">بحث بالاسم</label><input type="text" id="search-name" class="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg w-full p-2.5" placeholder="اكتب اسم الحارس..."></div>
+                        const filtersHTML = `<div id="guards-filters" class="p-4 grid grid-cols-1 md:grid-cols-5 gap-4 items-end bg-slate-800/50 rounded-lg mb-4">
+                            <div><label for="search-name" class="block mb-2 text-sm font-medium text-gray-300">بحث بالاسم</label><input type="text" id="search-name" class="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg w-full p-2.5" placeholder="اكتب اسم الحارس..."></div>
                             <div><label for="filter-region" class="block mb-2 text-sm font-medium text-gray-300">المنطقة</label><select id="filter-region" class="filter-select"><option value="">الكل</option>${[...new Set(data.map(i => i.region).filter(Boolean))].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>
                             <div><label for="filter-location" class="block mb-2 text-sm font-medium text-gray-300">الموقع</label><select id="filter-location" class="filter-select"><option value="">الكل</option>${[...new Set(data.map(i => i.location).filter(Boolean))].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>
                             <div><label for="filter-project" class="block mb-2 text-sm font-medium text-gray-300">المشروع</label><select id="filter-project" class="filter-select"><option value="">الكل</option>${[...new Set(data.map(i => i.project).filter(Boolean))].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>
-                            <button id="reset-filters-btn" class="w-full font-semibold bg-slate-600 text-white px-4 py-2.5 rounded-lg transition hover:bg-slate-500">إعادة تعيين</button>`;
-                        
+                            <button id="reset-filters-btn" class="w-full font-semibold bg-slate-600 text-white px-4 py-2.5 rounded-lg transition hover:bg-slate-500">إعادة تعيين</button>
+                        </div>`;
+                        tableContainer.insertAdjacentHTML('beforebegin', filtersHTML);
+
                         const renderFilteredGuards = () => {
-                           const nameFilter = container.querySelector('#search-name').value.toLowerCase();
-                           const regionFilter = container.querySelector('#filter-region').value; 
-                           const locationFilter = container.querySelector('#filter-location').value; 
-                           const projectFilter = container.querySelector('#filter-project').value;
-                           const filteredData = state.allGuardsData.filter(g => (!nameFilter || g.name.toLowerCase().includes(nameFilter)) && (!regionFilter || g.region === regionFilter) && (!locationFilter || g.location === locationFilter) && (!projectFilter || g.project === projectFilter));
-                           columns = [ 
-                               { header: 'الاسم', render: r => r.name }, 
-                               { header: 'رقم الهوية', render: r => r.id }, 
-                               { header: 'الحالة', render: r => {
-                                   const status = getGuardStatus(r.id);
-                                   if (status.onLeave) {
-                                       return `<div class="on-leave-status" title="إجمالي الإجازة: ${status.totalDays} أيام"><i class="ph ph-airplane-takeoff"></i> إجازة (${status.remainingDays} يوم متبقي)</div>`;
-                                   }
-                                   return `<span class="text-gray-400">متاح</span>`;
-                               }},
-                               { header: 'الإجراءات', render: r => `<div class="flex gap-2">
-                                   <button class="action-btn bg-yellow-500 hover:bg-yellow-600 edit-guard-btn" data-guard-id="${r.id}"><i class="ph ph-pencil-simple"></i> تعديل</button>
-                                   <button class="action-btn bg-indigo-500 hover:bg-indigo-600 view-schedule-btn" data-guard-id="${r.id}"><i class="ph ph-calendar"></i> عرض</button>
-                                   <button class="action-btn bg-red-600 hover:bg-red-700 delete-guard-btn" data-guard-id="${r.id}" data-guard-name="${r.name}"><i class="ph ph-trash"></i> حذف</button>
-                                   </div>` 
-                               }];
-                           renderTable(container.querySelector('#hr-guards-table'), columns, filteredData);
+                            const nameFilter = container.querySelector('#search-name').value.toLowerCase();
+                            const regionFilter = container.querySelector('#filter-region').value; 
+                            const locationFilter = container.querySelector('#filter-location').value; 
+                            const projectFilter = container.querySelector('#filter-project').value;
+                            const filteredData = state.allGuardsData.filter(g => (!nameFilter || g.name.toLowerCase().includes(nameFilter)) && (!regionFilter || g.region === regionFilter) && (!locationFilter || g.location === locationFilter) && (!projectFilter || g.project === projectFilter));
+                            columns = [ 
+                                { header: 'الاسم', render: r => r.name }, 
+                                { header: 'رقم الهوية', render: r => r.id }, 
+                                { header: 'نوع الموظف', render: r => `<span class="font-bold ${r.status === 'اساسي' ? 'text-cyan-400' : 'text-amber-400'}">${r.status || '-'}</span>`},
+                                { header: 'الحالة', render: r => {
+                                    const status = getGuardStatus(r.id);
+                                    if (status.onLeave) {
+                                        return `<div class="on-leave-status" title="إجمالي الإجازة: ${status.totalDays} أيام"><i class="ph ph-airplane-takeoff"></i> إجازة (${status.remainingDays} يوم متبقي)</div>`;
+                                    }
+                                    return `<span class="text-gray-400">متاح</span>`;
+                                }},
+                                { header: 'الإجراءات', render: r => `<div class="flex gap-2">
+                                      <button class="action-btn bg-yellow-500 hover:bg-yellow-600 edit-guard-btn" data-guard-id="${r.id}"><i class="ph ph-pencil-simple"></i> تعديل</button>
+                                      <button class="action-btn bg-indigo-500 hover:bg-indigo-600 view-schedule-btn" data-guard-id="${r.id}"><i class="ph ph-calendar"></i> الجدول</button>
+                                      <button class="action-btn bg-red-600 hover:bg-red-700 delete-guard-btn" data-guard-id="${r.id}" data-guard-name="${r.name}"><i class="ph ph-trash"></i> حذف</button>
+                                      </div>` 
+                                }
+                            ];
+                            renderTable(tableContainer, columns, filteredData);
                         };
                         renderFilteredGuards();
-                        guardsFiltersEl.addEventListener('input', renderFilteredGuards);
-                        guardsFiltersEl.querySelector('#reset-filters-btn').addEventListener('click', () => {
-                            guardsFiltersEl.querySelector('#search-name').value = ''; guardsFiltersEl.querySelector('#filter-region').value = ''; guardsFiltersEl.querySelector('#filter-location').value = ''; guardsFiltersEl.querySelector('#filter-project').value = '';
+                        container.querySelector('#guards-filters').addEventListener('input', renderFilteredGuards);
+                        container.querySelector('#reset-filters-btn').addEventListener('click', () => {
+                            container.querySelector('#search-name').value = ''; container.querySelector('#filter-region').value = ''; container.querySelector('#filter-location').value = ''; container.querySelector('#filter-project').value = '';
                             renderFilteredGuards();
                         });
+                        break;
+                    case 'coverage_recruitment':
+                        const { data: covGuards, error: covGuardsErr } = await _supabase.from('coverage_guards').select('*');
+                        if (covGuardsErr) showAlert('فشل تحميل بيانات حراس التغطية.');
+                        else {
+                            columns = [
+                                { header: 'الاسم', render: r => r.name },
+                                { header: 'رقم الهوية', render: r => r.id },
+                                { header: 'رقم الجوال', render: r => r.mobile_number || '-' },
+                                { header: 'الإجراءات', render: r => `<div class="flex gap-2">
+                                      <button class="action-btn bg-yellow-500 hover:bg-yellow-600 edit-coverage-guard-btn" data-guard-id="${r.id}"><i class="ph ph-pencil-simple"></i> تعديل</button>
+                                      <button class="action-btn bg-red-600 hover:bg-red-700 delete-coverage-guard-btn" data-guard-id="${r.id}" data-guard-name="${r.name}"><i class="ph ph-trash"></i> حذف</button>
+                                      </div>` }
+                            ];
+                            renderTable(tableContainer, columns, covGuards);
+                        }
+                        break;
+                    case 'coverage_sites':
+                        const { data: covSites, error: covSitesErr } = await _supabase.from('coverages').select('*').order('coverage_date', { ascending: false });
+                        if(covSitesErr) showAlert('فشل تحميل التغطيات.');
+                        else {
+                            columns = [
+                                { header: 'المشروع', render: r => r.project },
+                                { header: 'الموقع', render: r => r.location },
+                                { header: 'التاريخ', render: r => new Date(r.coverage_date).toLocaleDateString('ar-SA') },
+                                { header: 'الوردية', render: r => r.shift_details },
+                                { header: 'المبلغ', render: r => `${r.payout_amount} ريال` },
+                                { header: 'الحالة', render: r => r.status === 'Available' ? 'متاحة' : `مأخوذة (${r.assigned_guard_name || 'غير محدد'})` },
+                                { header: 'الإجراءات', render: r => `<div class="flex gap-2">
+                                      <button class="action-btn bg-yellow-500 hover:bg-yellow-600 edit-coverage-site-btn" data-site-id="${r.id}"><i class="ph ph-pencil-simple"></i> تعديل</button>
+                                      <button class="action-btn bg-red-600 hover:bg-red-700 delete-coverage-site-btn" data-site-id="${r.id}"><i class="ph ph-trash"></i> حذف</button>
+                                      </div>` }
+                            ];
+                            renderTable(tableContainer, columns, covSites);
+                        }
+                        break;
+                    case 'coverage_applicants':
+                        const { data: apps, error: appsErr } = await _supabase
+                            .from('coverage_applications')
+                            .select('*, coverage_guards(*), coverages(*)')
+                            .eq('status', 'Pending');
+                        if (appsErr) showAlert('فشل تحميل طلبات التقديم.');
+                        else {
+                             columns = [
+                                { header: 'اسم الحارس', render: r => r.coverage_guards.name },
+                                { header: 'رقم الهوية', render: r => r.coverage_guards.id },
+                                { header: 'تفاصيل التغطية', render: r => `${r.coverages.project} - ${r.coverages.location} (${new Date(r.coverages.coverage_date).toLocaleDateString('ar-SA')})` },
+                                { header: 'ملاحظات', render: r => r.notes || '-' },
+                                { header: 'الإجراءات', render: r => `<div class="flex gap-2">
+                                      <button class="action-btn bg-green-600 hover:bg-green-700 accept-coverage-app-btn" data-app-id="${r.id}" data-coverage-id="${r.coverage_id}" data-guard-id="${r.guard_id}" data-guard-name="${r.coverage_guards.name}"><i class="ph ph-check"></i> قبول</button>
+                                      <button class="action-btn bg-red-600 hover:bg-red-700 reject-coverage-app-btn" data-app-id="${r.id}"><i class="ph ph-x"></i> رفض</button>
+                                      <button class="action-btn bg-gray-600 hover:bg-gray-700 delete-coverage-app-btn" data-app-id="${r.id}"><i class="ph ph-trash"></i> حذف</button>
+                                      </div>` }
+                            ];
+                            renderTable(tableContainer, columns, apps);
+                        }
                         break;
                     case 'salaries':
                         const [attRes, finRes] = await Promise.all([
@@ -518,153 +927,217 @@
                         const financialTransactions = finRes.data;
 
                         const salaryData = state.allGuardsData.map(guard => {
-                            const guardAttendance = attendanceRecords.filter(r => r.guardId === guard.id && r.work_duration);
+                            const guardAttendance = attendanceRecords.filter(r => r.guard_id === guard.id && r.status === 'Approved');
                             const guardTransactions = financialTransactions.filter(t => t.guard_id === guard.id);
-                             const baseSalary = (guard.basic_salary || 0) + (guard.housing_allowance || 0) + (guard.transport_allowance || 0) + (guard.other_allowances || 0);
-                            const dailyRate = baseSalary / 30;
-
-                            let totalMs = 0;
-                            let totalDeductionFromHours = 0;
-                            guardAttendance.forEach(att => {
-                                const workMs = parseDuration(att.work_duration);
-                                totalMs += workMs;
-                                const workHours = workMs / (1000 * 60 * 60);
-                                if (workHours < 8) {
-                                    const entitlement = calculateEntitlement(guard.id, workMs);
-                                    const deductionForDay = dailyRate - entitlement;
-                                    totalDeductionFromHours += deductionForDay > 0 ? deductionForDay : 0;
-                                }
-                            });
-
-                            const totalDaysWorked = new Set(guardAttendance.map(r => new Date(r.created_at).toLocaleDateString())).size;
-                            const requiredHours = totalDaysWorked * 8;
                             
-                            const totalManualDeductions = guardTransactions.filter(t => t.type === 'deduction').reduce((acc, curr) => acc + curr.amount, 0);
+                            const totalEntitlement = guardAttendance.reduce((acc, curr) => acc + (curr.daily_entitlement || 0), 0);
+                            const totalDeductions = guardTransactions.filter(t => t.type === 'deduction').reduce((acc, curr) => acc + curr.amount, 0);
                             const totalAdditions = guardTransactions.filter(t => t.type === 'addition').reduce((acc, curr) => acc + curr.amount, 0);
-                            const netSalary = baseSalary - totalDeductionFromHours - totalManualDeductions + totalAdditions;
+                            const totalLoans = guardTransactions.filter(t => t.type === 'loan').reduce((acc, curr) => acc + curr.amount, 0); // Assuming loans are also deductions
 
-                            return { ...guard, totalDaysWorked, totalHoursWorked: formatDuration(totalMs), requiredHours, totalDeductionFromHours, netSalary };
+                            const netSalary = totalEntitlement - totalDeductions - totalLoans + totalAdditions;
+
+                            return { ...guard, totalEntitlement, totalDeductions, totalAdditions, netSalary };
                         });
                         
-                        container.innerHTML = `<div id="salary-filters" class="p-4 grid grid-cols-1 md:grid-cols-5 gap-4 items-end bg-slate-800/50 rounded-lg mb-4">
-                            </div><div id="hr-salaries-table"></div>`;
-                        const salaryFiltersEl = container.querySelector('#salary-filters');
-                         salaryFiltersEl.innerHTML = `<div><label for="salary-search-name" class="block mb-2 text-sm font-medium text-gray-300">بحث بالاسم</label><input type="text" id="salary-search-name" class="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg w-full p-2.5" placeholder="اكتب اسم الحارس..."></div>
-                            <div><label for="salary-filter-region" class="block mb-2 text-sm font-medium text-gray-300">المنطقة</label><select id="salary-filter-region" class="filter-select"><option value="">الكل</option>${[...new Set(state.allGuardsData.map(i => i.region).filter(Boolean))].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>
-                            <div><label for="salary-filter-location" class="block mb-2 text-sm font-medium text-gray-300">الموقع</label><select id="salary-filter-location" class="filter-select"><option value="">الكل</option>${[...new Set(state.allGuardsData.map(i => i.location).filter(Boolean))].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>
-                            <div><label for="salary-filter-project" class="block mb-2 text-sm font-medium text-gray-300">المشروع</label><select id="salary-filter-project" class="filter-select"><option value="">الكل</option>${[...new Set(state.allGuardsData.map(i => i.project).filter(Boolean))].map(v => `<option value="${v}">${v}</option>`).join('')}</select></div>
-                            <button id="salary-reset-filters-btn" class="w-full font-semibold bg-slate-600 text-white px-4 py-2.5 rounded-lg transition hover:bg-slate-500">إعادة تعيين</button>`;
-
-
-                        const renderFilteredSalaries = () => {
-                            const nameFilter = container.querySelector('#salary-search-name').value.toLowerCase();
-                            const regionFilter = container.querySelector('#salary-filter-region').value;
-                            const locationFilter = container.querySelector('#salary-filter-location').value;
-                            const projectFilter = container.querySelector('#salary-filter-project').value;
-                            
-                            const filteredData = salaryData.filter(g => (!nameFilter || g.name.toLowerCase().includes(nameFilter)) && (!regionFilter || g.region === regionFilter) && (!locationFilter || g.location === locationFilter) && (!projectFilter || g.project === projectFilter));
-
-                            columns = [
-                                { header: 'اسم الحارس', render: r => r.name },
-                                { header: 'أيام العمل', render: r => r.totalDaysWorked },
-                                { header: 'ساعات العمل', render: r => r.totalHoursWorked },
-                                { header: 'خصم الساعات', render: r => `<span class="text-red-400">${r.totalDeductionFromHours.toFixed(2)} ريال</span>` },
-                                { header: 'إجمالي الراتب', render: r => `${r.netSalary.toFixed(2)} ريال` },
-                                { header: 'إجراءات', render: r => `<div class="flex gap-2">
-                                    <button class="action-btn bg-red-500 hover:bg-red-600 financial-btn" data-guard-id="${r.id}" data-type="deduction"><i class="ph ph-minus-circle"></i> خصم</button>
-                                    <button class="action-btn bg-green-500 hover:bg-green-600 financial-btn" data-guard-id="${r.id}" data-type="addition"><i class="ph ph-plus-circle"></i> زيادة</button>
-                                    </div>` 
-                                }
-                            ];
-                            renderTable(container.querySelector('#hr-salaries-table'), columns, filteredData);
-                        };
-
-                        renderFilteredSalaries();
-                        if (salaryFiltersEl) {
-                             salaryFiltersEl.addEventListener('input', renderFilteredSalaries);
-                             salaryFiltersEl.querySelector('#salary-reset-filters-btn').addEventListener('click', () => {
-                                salaryFiltersEl.querySelector('#salary-search-name').value = '';
-                                salaryFiltersEl.querySelector('#salary-filter-region').value = '';
-                                salaryFiltersEl.querySelector('#salary-filter-location').value = '';
-                                salaryFiltersEl.querySelector('#salary-filter-project').value = '';
-                                renderFilteredSalaries();
-                             });
-                        }
+                        columns = [
+                            { header: 'اسم الحارس', render: r => r.name },
+                            { header: 'المستحق الشهري', render: r => `<span class="text-green-400">${r.totalEntitlement.toFixed(2)} ريال</span>` },
+                            { header: 'الخصومات', render: r => `<span class="text-red-400">${r.totalDeductions.toFixed(2)} ريال</span>` },
+                            { header: 'الإضافات', render: r => `<span class="text-blue-400">${r.totalAdditions.toFixed(2)} ريال</span>` },
+                            { header: 'صافي الراتب', render: r => `<span class="font-bold text-lg">${r.netSalary.toFixed(2)} ريال</span>` },
+                            { header: 'إجراءات مالية', render: r => `<div class="flex gap-2">
+                                  <button class="action-btn bg-red-500 hover:bg-red-600 financial-btn" data-guard-id="${r.id}" data-type="deduction"><i class="ph ph-minus-circle"></i> خصم</button>
+                                  <button class="action-btn bg-green-500 hover:bg-green-600 financial-btn" data-guard-id="${r.id}" data-type="addition"><i class="ph ph-plus-circle"></i> زيادة</button>
+                                  </div>` 
+                            }
+                        ];
+                        renderTable(tableContainer, columns, salaryData);
                         break;
                     case 'hr_staff':
                     case 'supervisors':
                     case 'operations':
                         const rolesMap = { hr_staff: 'hr', supervisors: 'admin', operations: 'operations' };
-                        const roleNamesMap = { hr_staff: 'موظف موارد بشرية', supervisors: 'مشرف', operations: 'موظف عمليات' };
                         const role = rolesMap[tab];
-                        const roleName = roleNamesMap[tab];
                         ({data, error} = await _supabase.from('staff').select('*').eq('role', role));
-                        container.innerHTML = `<div class="mb-4"><button id="add-staff-btn" data-role="${role}" class="font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg transition hover:bg-blue-700">إضافة ${roleName} جديد</button></div><div id="hr-staff-table"></div>`;
                         columns = [ { header: 'الاسم', render: r => r.name }, { header: 'المسمى الوظيفي', render: r => r.job_title || '-' }, { header: 'اسم المستخدم', render: r => r.username }, { header: 'الإجراءات', render: r => `<div class="flex gap-2"><button class="action-btn bg-yellow-500 hover:bg-yellow-600 edit-staff-btn" data-staff-id="${r.id}"><i class="ph ph-pencil-simple"></i> تعديل</button><button class="action-btn bg-red-600 hover:bg-red-700 delete-staff-btn" data-staff-id="${r.id}" data-staff-name="${r.name}"><i class="ph ph-trash"></i> حذف</button></div>` }];
-                        renderTable(container.querySelector('#hr-staff-table'), columns, data);
+                        renderTable(tableContainer, columns, data);
                         break;
-                    case 'attendance':
-                         ({ data, error } = await _supabase.from('attendance').select('*').order('created_at', { ascending: false }));
-                         columns = [ { header: 'اسم الحارس', render: r => r.guardName }, { header: 'وقت الحضور', render: r => new Date(r.created_at).toLocaleString('ar-SA') }, { header: 'وقت الخروج', render: r => r.checkout_at ? new Date(r.checkout_at).toLocaleString('ar-SA') : '-' }, { header: 'المستحق', render: r => r.daily_entitlement ? `${r.daily_entitlement.toFixed(2)} ريال` : '-' }, { header: 'الإجراءات', render: r => `<button class="action-btn bg-red-600 hover:bg-red-700 delete-record-btn" data-id="${r.id}" data-table="attendance"><i class="ph ph-trash"></i> حذف</button>`} ];
-                         renderTable(container, columns, data);
-                         break;
+                    
+                    case 'transfers':
+                        ({ data, error } = await _supabase.from('transfer_requests').select('*').order('created_at', { ascending: false }));
+                        columns = [
+                            { header: 'اسم الحارس', render: r => r.guard_name },
+                            { header: 'من مشروع', render: r => r.current_project },
+                            { header: 'إلى موقع', render: r => r.new_location },
+                            { header: 'إلى مشروع', render: r => r.new_project },
+                            { header: 'مقدم الطلب', render: r => r.from_supervisor_name },
+                            { header: 'الحالة', render: r => {
+                                let statusText = r.status;
+                                let color = 'text-yellow-400';
+                                if (r.status === 'Approved') { statusText = 'معتمد'; color = 'text-green-400'; }
+                                if (r.status === 'Rejected') { statusText = 'مرفوض'; color = 'text-red-400'; }
+                                return `<span class="font-bold ${color}">${statusText}</span>
+                                      <span class="text-xs text-gray-400 block">بواسطة: ${r.processed_by || '-'}</span>
+                                      ${r.rejection_reason ? `<span class="text-xs text-red-300 block">سبب الرفض: ${r.rejection_reason}</span>` : ''}`;
+                            }}
+                        ];
+                        renderTable(tableContainer, columns, data);
+                        break;
+
                     case 'leaves': 
-                         ({ data, error } = await _supabase.from('leave_requests').select('*').order('created_at', { ascending: false }));
-                         columns = [ { header: 'اسم الحارس', render: r => r.guardName }, { header: 'أيام الإجازة', render: r => r.days_requested }, { header: 'الحالة', render: r => r.status}, { header: 'الإجراءات', render: r => `<div class="flex gap-2"> <button class="action-btn bg-green-600 hover:bg-green-700 hr-approve-btn" data-id="${r.id}" data-type="leave_requests"><i class="ph ph-check"></i> موافقة</button><button class="action-btn bg-red-600 hover:bg-red-700 hr-reject-btn" data-id="${r.id}" data-type="leave_requests"><i class="ph ph-x"></i> رفض</button><button class="action-btn bg-gray-600 hover:bg-gray-700 delete-record-btn" data-id="${r.id}" data-table="leave_requests"><i class="ph ph-trash"></i> حذف</button> </div>` }];
-                         renderTable(container, columns, data);
-                         break;
                     case 'loans':
-                         ({ data, error } = await _supabase.from('loan_requests').select('*').order('created_at', { ascending: false }));
-                         columns = [ { header: 'اسم الحارس', render: r => r.guardName }, { header: 'المبلغ', render: r => `${r.amount_requested} ريال` }, { header: 'الحالة', render: r => r.status}, { header: 'الإجراءات', render: r => `<div class="flex gap-2"><button class="action-btn bg-green-600 hover:bg-green-700 hr-approve-btn" data-id="${r.id}" data-type="loan_requests"><i class="ph ph-check"></i> موافقة</button><button class="action-btn bg-red-600 hover:bg-red-700 hr-reject-btn" data-id="${r.id}" data-type="loan_requests"><i class="ph ph-x"></i> رفض</button><button class="action-btn bg-gray-600 hover:bg-gray-700 delete-record-btn" data-id="${r.id}" data-table="loan_requests"><i class="ph ph-trash"></i> حذف</button></div>` }];
-                         renderTable(container, columns, data);
-                         break;
+                    case 'resignations':
+                        const requestTypeMap = { leaves: 'leave_requests', loans: 'loan_requests', resignations: 'resignation_requests' };
+                        const tableName = requestTypeMap[tab];
+                        ({ data, error } = await _supabase.from(tableName).select('*').order('created_at', { ascending: false }));
+                        columns = [ 
+                            { header: 'اسم الحارس', render: r => r.guard_name },
+                            { header: 'رقم الهوية', render: r => { const guard = state.allGuardsData.find(g => g.id === r.guard_id); return guard?.id || '-'; } },
+                            { header: 'التفاصيل', render: r => {
+                                if(tableName === 'leave_requests') return `طلب ${r.days_requested} يوم`;
+                                if(tableName === 'loan_requests') return `طلب ${r.amount_requested} ريال`;
+                                return r.reason.substring(0, 50) + '...';
+                            }}, 
+                            { header: 'الحالة', render: r => r.status || 'Pending'}, 
+                            { header: 'الإجراءات', render: r => {
+                                const currentStatus = r.status || 'Pending';
+                                if (currentStatus === 'Approved' && tableName === 'leave_requests') {
+                                    return `<div class="flex gap-2">
+                                                <span class="font-bold text-green-400">معتمد</span>
+                                                <button class="action-btn bg-orange-600 hover:bg-orange-700 cancel-leave-btn" data-id="${r.id}" data-table="${tableName}"><i class="ph ph-x-circle"></i> قطع</button>
+                                            </div>`;
+                                }
+                                if (currentStatus !== 'Pending') return `<span class="font-bold ${currentStatus === 'Approved' ? 'text-green-400' : 'text-red-400'}">${currentStatus === 'Approved' ? 'معتمد' : 'مرفوض'}</span>`;
+                                return `<div class="flex gap-2"> 
+                                      <button class="action-btn bg-green-600 hover:bg-green-700 hr-action-btn" data-id="${r.id}" data-table="${tableName}" data-action="Approved"><i class="ph ph-check"></i> موافقة</button>
+                                      <button class="action-btn bg-red-600 hover:bg-red-700 hr-action-btn" data-id="${r.id}" data-table="${tableName}" data-action="Rejected"><i class="ph ph-x"></i> رفض</button>
+                                      <button class="action-btn bg-gray-600 hover:bg-gray-700 delete-record-btn" data-id="${r.id}" data-table="${tableName}"><i class="ph ph-trash"></i> حذف</button> 
+                                      </div>`;
+                            }}
+                        ];
+                        renderTable(tableContainer, columns, data);
+                        break;
                     case 'logs':
-                         ({ data, error } = await _supabase.from('activity_log').select('*').order('created_at', { ascending: false }));
-                         columns = [ { header: 'المنفذ', render: r => r.actor }, { header: 'الإجراء', render: r => r.action }, { header: 'التفاصيل', render: r => r.details }, { header: 'الوقت', render: r => new Date(r.created_at).toLocaleString('ar-SA') } ];
-                         renderTable(container, columns, data);
-                         break;
+                        ({ data, error } = await _supabase.from('activity_log').select('*').order('created_at', { ascending: false }));
+                        columns = [ { header: 'المنفذ', render: r => r.actor }, { header: 'الإجراء', render: r => r.action }, { header: 'التفاصيل', render: r => r.details }, { header: 'الوقت', render: r => new Date(r.created_at).toLocaleString('ar-SA') } ];
+                        renderTable(tableContainer, columns, data);
+                        break;
                 }
                 showLoading(false);
                 if(error) return showAlert('فشل تحميل البيانات.');
             };
 
             const logout = () => { sessionStorage.clear(); state = { currentGuard: null, currentUser: null, currentRole: null, allGuardsData: [], activeAttendanceId: null }; showPage('landing-page'); };
+            
             const checkSession = () => {
                 const guard = sessionStorage.getItem('arkanatGuard'); 
                 const user = sessionStorage.getItem('arkanatUser');
                 const role = sessionStorage.getItem('arkanatRole');
-                if (guard) { state.currentGuard = JSON.parse(guard); dom.guardNameDisplay.textContent = state.currentGuard.name; showPage('guard-dashboard-page'); updateGuardButtonState(state.currentGuard.id); }
-                else if (user && role) { state.currentUser = JSON.parse(user); state.currentRole = role; if (role === 'hr') loadHrDashboard(); else loadAdminDashboard(); }
-                else { showPage('landing-page'); }
+                const coverageGuard = sessionStorage.getItem('arkanatCoverageGuard');
+
+                if (coverageGuard) {
+                    state.currentGuard = JSON.parse(coverageGuard);
+                    state.currentRole = 'coverage_guard';
+                    loadCoverageGuardDashboard();
+                } else if (guard) { 
+                    state.currentGuard = JSON.parse(guard); 
+                    dom.guardNameDisplay.textContent = state.currentGuard.name; 
+                    showPage('guard-dashboard-page'); 
+                    updateGuardButtonState(state.currentGuard.id); 
+                } else if (user && role) { 
+                    state.currentUser = JSON.parse(user); 
+                    state.currentRole = role; 
+                    if (role === 'hr') loadHrDashboard(); 
+                    else loadAdminDashboard(); 
+                } else { 
+                    showPage('landing-page'); 
+                }
             };
             
+            const exportTableToCSV = (tableSelector, filename) => {
+                const table = document.querySelector(tableSelector);
+                if (!table) {
+                    showAlert('لا يوجد جدول لتصديره.');
+                    return;
+                }
+                let csv = [];
+                const rows = table.querySelectorAll("tr");
+                
+                for (const row of rows) {
+                    const cols = row.querySelectorAll("td, th");
+                    const rowData = [];
+                    for (const col of cols) {
+                        // Get text content, remove extra whitespace and commas.
+                        let data = col.innerText.replace(/(\r\n|\n|\r)/gm, " ").replace(/,/g, ";").trim();
+                        // Handle buttons inside cells
+                        if (col.querySelector('button')) {
+                            const buttonTexts = Array.from(col.querySelectorAll('button')).map(btn => btn.textContent.trim());
+                            data = buttonTexts.join(' / ');
+                        }
+                        rowData.push(`"${data}"`);
+                    }
+                    csv.push(rowData.join(","));
+                }
+
+                const csvFile = new Blob(["\uFEFF" + csv.join("\n")], { type: "text/csv;charset=utf-8;" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(csvFile);
+                link.download = filename || 'export.csv';
+                link.click();
+            }
+
             const setupEventListeners = () => {
                 document.querySelectorAll('.login-option-card').forEach(b => b.addEventListener('click', (e) => { 
                     state.currentRole = e.currentTarget.dataset.role; 
-                    const isGuard = state.currentRole === 'guard';
-                    document.querySelector('#login-page label[for="login-id"]').textContent = isGuard ? 'رقم الهوية' : 'اسم المستخدم';
-                    dom.loginTitle.textContent = { guard: 'تسجيل دخول الحارس', admin: 'دخول المشرف', operations: 'دخول إدارة العمليات', hr: 'دخول الموارد البشرية' }[state.currentRole];
+                    const isStaff = ['admin', 'operations', 'hr'].includes(state.currentRole);
+                    document.querySelector('#login-page label[for="login-id"]').textContent = isStaff ? 'اسم المستخدم' : 'رقم الهوية';
+                    dom.loginTitle.textContent = { guard: 'تسجيل دخول الحارس', coverage_guard: 'دخول حراس التغطيات', admin: 'دخول المشرف', operations: 'دخول إدارة العمليات', hr: 'دخول الموارد البشرية' }[state.currentRole];
                     showPage('login-page'); 
                 }));
-                document.getElementById('login-back-btn').addEventListener('click', () => showPage('landing-page'));
-                document.querySelectorAll('.logout-btn').forEach(b => b.addEventListener('click', logout));
-                document.getElementById('alert-close-btn').addEventListener('click', closeModal);
-                document.querySelectorAll('.modal-close-btn').forEach(b => b.addEventListener('click', closeModal));
 
                 document.getElementById('login-btn').addEventListener('click', async () => {
-                    const id = document.getElementById('login-id').value.trim(); const pass = document.getElementById('login-password').value.trim(); if (!id || !pass) return showAlert("يرجى إدخال البيانات."); showLoading(true);
+                    const id = document.getElementById('login-id').value.trim(); 
+                    const pass = document.getElementById('login-password').value.trim(); 
+                    if (!id || !pass) return showAlert("يرجى إدخال البيانات."); 
+                    showLoading(true);
+
                     if (state.currentRole === 'guard') {
-                         const { data, error } = await _supabase.from('guards').select('*').eq('id', id).single(); if (error || !data) showAlert("رقم الهوية غير صحيح."); else if (data.password === pass) { state.currentGuard = data; sessionStorage.setItem('arkanatGuard', JSON.stringify(data)); dom.guardNameDisplay.textContent = state.currentGuard.name; showPage('guard-dashboard-page'); await updateGuardButtonState(state.currentGuard.id); } else showAlert("كلمة المرور غير صحيحة.");
+                         const { data, error } = await _supabase.from('guards').select('*').eq('id', id).single(); 
+                         if (error || !data) { showAlert("رقم الهوية غير صحيح."); }
+                         else if (data.password === pass) { 
+                             state.currentGuard = data; 
+                             sessionStorage.setItem('arkanatGuard', JSON.stringify(data)); 
+                             dom.guardNameDisplay.textContent = state.currentGuard.name; 
+                             showPage('guard-dashboard-page'); 
+                             await updateGuardButtonState(state.currentGuard.id); 
+                         } else { showAlert("كلمة المرور غير صحيحة."); }
+                    } else if (state.currentRole === 'coverage_guard') {
+                        const { data, error } = await _supabase.from('coverage_guards').select('*').eq('id', id).single();
+                        if (error || !data) { showAlert("رقم الهوية غير صحيح."); }
+                        else if (data.password === pass) {
+                            state.currentGuard = data; // Use the same state property for simplicity
+                            state.currentRole = 'coverage_guard';
+                            sessionStorage.setItem('arkanatCoverageGuard', JSON.stringify(data));
+                            loadCoverageGuardDashboard();
+                        } else { showAlert("كلمة المرور غير صحيحة."); }
                     } else { // Admin, Ops, HR
                         if (id === 'admin' && pass === 'admin') {
                             const superAdminUser = { name: 'Super Admin', role: 'hr' };
-                            state.currentUser = superAdminUser;
+                            state.currentUser = superAdminUser; state.currentRole = 'hr';
                             sessionStorage.setItem('arkanatUser', JSON.stringify(superAdminUser));
-                            sessionStorage.setItem('arkanatRole', 'hr'); // Super admin always gets HR role
+                            sessionStorage.setItem('arkanatRole', 'hr');
                             loadHrDashboard();
                         } else {
                             const { data, error } = await _supabase.from('staff').select('*').eq('username', id).eq('role', state.currentRole).single();
-                            if (error || !data) showAlert("اسم المستخدم غير صحيح أو ليس لديه الصلاحية."); else if (data.password === pass) { state.currentUser = data; sessionStorage.setItem('arkanatUser', JSON.stringify(data)); sessionStorage.setItem('arkanatRole', data.role); if (data.role === 'hr') loadHrDashboard(); else loadAdminDashboard(); } else showAlert("كلمة المرور غير صحيحة.");
+                            if (error || !data) { showAlert("اسم المستخدم غير صحيح أو ليس لديه الصلاحية."); }
+                            else if (data.password === pass) { 
+                                state.currentUser = data; 
+                                sessionStorage.setItem('arkanatUser', JSON.stringify(data)); 
+                                sessionStorage.setItem('arkanatRole', data.role); 
+                                if (data.role === 'hr') loadHrDashboard(); 
+                                else loadAdminDashboard(); 
+                            } else { showAlert("كلمة المرور غير صحيحة."); }
                         }
                     }
                     showLoading(false);
@@ -675,7 +1148,10 @@
                     if (!button) return;
                     
                     if (button.id === 'check-in-btn') {
-                        if (!button.disabled) showModal('attendance-modal');
+                        if (!button.disabled) {
+                            showModal('attendance-modal');
+                            document.getElementById('guard-notes').value = '';
+                        }
                     } else if (button.id === 'check-out-btn') {
                          if (!button.disabled) dom.checkOutBtn.dispatchEvent(new Event('checkout'));
                     } else if (button.classList.contains('request')) {
@@ -686,8 +1162,7 @@
                 document.getElementById('submit-attendance-btn').addEventListener('click', async () => {
                     showLoading(true); 
                     try {
-                        const location = await getCurrentLocation();
-                        const { data, error } = await _supabase.from('attendance').insert({ guardId: state.currentGuard.id, guardName: state.currentGuard.name, notes: document.getElementById('guard-notes').value.trim(), status: 'Pending', checkin_location: location }).select().single();
+                        const { data, error } = await _supabase.from('attendance').insert({ guard_id: state.currentGuard.id, guard_name: state.currentGuard.name, notes: document.getElementById('guard-notes').value.trim(), status: 'Pending'}).select().single();
                         closeModal();
                         if (error) throw error;
                         await logActivity(`الحارس: ${state.currentGuard.name}`, 'قام بتسجيل الحضور', `رقم السجل: ${data?.id}`);
@@ -700,53 +1175,103 @@
                     }
                 });
                 
-                dom.checkOutBtn.addEventListener('checkout', async () => {
-                    if (dom.checkOutBtn.disabled || !state.activeAttendanceId) return; 
-                    if (!await confirmAction('تأكيد الانصراف', 'هل أنت متأكد من رغبتك في الانصراف الآن؟')) return; 
-                    showLoading(true);
-                    try {
-                        const location = await getCurrentLocation();
-                        await fetchAllGuards();
-                        const checkoutTime = new Date();
-                        const {data: attendanceRecord, error: fetchError} = await _supabase.from('attendance').select('created_at').eq('id', state.activeAttendanceId).single();
-                        if (fetchError || !attendanceRecord) { throw new Error('لم يتم العثور على سجل الحضور النشط.'); }
-                        const workDurationMs = checkoutTime - new Date(attendanceRecord.created_at);
-                        const durationString = formatDuration(workDurationMs);
-                        const entitlement = calculateEntitlement(state.currentGuard.id, workDurationMs);
-                        const { error } = await _supabase.from('attendance').update({ checkout_at: checkoutTime.toISOString(), work_duration: durationString, daily_entitlement: entitlement, checkout_location: location }).eq('id', state.activeAttendanceId);
-                        if(error) throw error;
-                        await logActivity(`الحارس: ${state.currentGuard.name}`, 'قام بالانصراف', `مدة العمل: ${durationString}`);
-                        showAlert("تم تسجيل انصرافك بنجاح."); await updateGuardButtonState(state.currentGuard.id);
-                    } catch (error) {
-                        showAlert(`فشل الانصراف: ${error.message}`);
-                    } finally {
-                        showLoading(false);
-                    }
-                });
+                if (dom.checkOutBtn) {
+                    dom.checkOutBtn.addEventListener('checkout', async () => {
+                        if (dom.checkOutBtn.disabled || !state.activeAttendanceId) return; 
+                        if (!await confirmAction('تأكيد الانصراف', 'هل أنت متأكد من رغبتك في الانصراف الآن؟')) return; 
+                        showLoading(true);
+                        try {
+                            await fetchAllGuards();
+                            const checkoutTime = new Date();
+                            const {data: attendanceRecord, error: fetchError} = await _supabase.from('attendance').select('created_at').eq('id', state.activeAttendanceId).single();
+                            if (fetchError || !attendanceRecord) { throw new Error('لم يتم العثور على سجل الحضور النشط.'); }
+                            const workDurationMs = checkoutTime - new Date(attendanceRecord.created_at);
+                            const durationString = formatDuration(workDurationMs);
+                            const currentGuardData = state.allGuardsData.find(g => g.id === state.currentGuard.id);
+                            const entitlement = calculateEntitlement(currentGuardData, workDurationMs);
+                            const { error } = await _supabase.from('attendance').update({ checkout_at: checkoutTime.toISOString(), work_duration: durationString, daily_entitlement: entitlement }).eq('id', state.activeAttendanceId);
+                            if(error) throw error;
+                            await logActivity(`الحارس: ${state.currentGuard.name}`, 'قام بالانصراف', `مدة العمل: ${durationString}`);
+                            showAlert("تم تسجيل انصرافك بنجاح."); await updateGuardButtonState(state.currentGuard.id);
+                        } catch (error) {
+                            showAlert(`فشل الانصراف: ${error.message}`);
+                        } finally {
+                            showLoading(false);
+                        }
+                    });
+                }
 
-                document.getElementById('submit-leave-btn').addEventListener('click', async () => { const days = document.getElementById('leave-days').value; const reason = document.getElementById('leave-reason').value.trim(); if(!days || !reason) return showAlert('يرجى ملء كل الحقول.'); showLoading(true); await _supabase.from('leave_requests').insert({ guardId: state.currentGuard.id, guardName: state.currentGuard.name, days_requested: days, reason, status: 'Pending' }); await logActivity(`الحارس: ${state.currentGuard.name}`, 'قدم طلب إجازة', `لمدة ${days} يوم`); showLoading(false); closeModal(); showAlert("تم إرسال طلب الإجازة بنجاح."); });
-                document.getElementById('submit-loan-btn').addEventListener('click', async () => { const amount = document.getElementById('loan-amount').value; const reason = document.getElementById('loan-reason').value.trim(); if(!amount || !reason) return showAlert('يرجى ملء كل الحقول.'); showLoading(true); await _supabase.from('loan_requests').insert({ guardId: state.currentGuard.id, guardName: state.currentGuard.name, amount_requested: amount, reason, status: 'Pending' }); await logActivity(`الحارس: ${state.currentGuard.name}`, 'قدم طلب سلفة', `بمبلغ ${amount} ريال`); showLoading(false); closeModal(); showAlert("تم إرسال طلب السلفة بنجاح."); });
+                const handleGuardRequest = async (tableName, payload, successMsg, logAction, logDetails) => {
+                    showLoading(true);
+                    const { error } = await _supabase.from(tableName).insert(payload);
+                    if (error) {
+                        console.error(`Error submitting request to ${tableName}:`, error);
+                        showLoading(false);
+                        closeModal();
+                        showAlert('فشل إرسال الطلب');
+                        return;
+                    }
+                    await logActivity(`الحارس: ${state.currentGuard.name}`, logAction, logDetails);
+                    showLoading(false);
+                    closeModal();
+                    showAlert(successMsg);
+                };
+
+                document.getElementById('submit-leave-btn').addEventListener('click', () => { const days = document.getElementById('leave-days').value; const reason = document.getElementById('leave-reason').value.trim(); if(!days || !reason) return showAlert('يرجى ملء كل الحقول.'); handleGuardRequest('leave_requests', { guard_id: state.currentGuard.id, guard_name: state.currentGuard.name, days_requested: days, reason, status: 'Pending' }, "تم إرسال طلب الإجازة بنجاح.", 'قدم طلب إجازة', `لمدة ${days} يوم`); });
+                document.getElementById('submit-loan-btn').addEventListener('click', () => { const amount = document.getElementById('loan-amount').value; const reason = document.getElementById('loan-reason').value.trim(); if(!amount || !reason) return showAlert('يرجى ملء كل الحقول.'); handleGuardRequest('loan_requests', { guard_id: state.currentGuard.id, guard_name: state.currentGuard.name, amount_requested: amount, reason, status: 'Pending' }, "تم إرسال طلب السلفة بنجاح.", 'قدم طلب سلفة', `بمبلغ ${amount} ريال`); });
+                document.getElementById('submit-permission-btn').addEventListener('click', () => { const reason = document.getElementById('permission-reason').value.trim(); if(!reason) return showAlert('يرجى ذكر السبب.'); handleGuardRequest('permission_requests', { guard_id: state.currentGuard.id, guard_name: state.currentGuard.name, reason, status: 'Pending' }, "تم إرسال طلب الإستئذان بنجاح.", 'قدم طلب استئذان', `السبب: ${reason}`); });
+                document.getElementById('submit-overtime-btn').addEventListener('click', () => { const reason = document.getElementById('overtime-reason').value.trim(); if(!reason) return showAlert('يرجى ذكر التفاصيل.'); handleGuardRequest('overtime_requests', { guard_id: state.currentGuard.id, guard_name: state.currentGuard.name, reason, status: 'Pending' }, "تم إرسال طلب العمل الإضافي بنجاح.", 'قدم طلب عمل إضافي', `السبب: ${reason}`); });
+                document.getElementById('submit-resignation-btn').addEventListener('click', () => { const reason = document.getElementById('resignation-reason').value.trim(); if(!reason) return showAlert('يرجى ذكر السبب.'); handleGuardRequest('resignation_requests', { guard_id: state.currentGuard.id, guard_name: state.currentGuard.name, reason, status: 'Pending' }, "تم إرسال طلب الاستقالة.", 'قدم طلب استقالة', `السبب: ${reason}`); });
                 
+                // Initialize HR Tabs
+                const hrTabsContainer = dom.hrTabs;
+                if(hrTabsContainer){
+                    hrTabsContainer.innerHTML = `
+                        <a href="#" data-tab="guards" class="custom-tab">الحراس</a>
+                        <a href="#" data-tab="salaries" class="custom-tab">الرواتب</a>
+                        <a href="#" data-tab="hr_staff" class="custom-tab">الموارد البشرية</a>
+                        <a href="#" data-tab="supervisors" class="custom-tab">المشرفون</a>
+                        <a href="#" data-tab="operations" class="custom-tab">العمليات</a>
+                        <a href="#" data-tab="coverage_recruitment" class="custom-tab">توظيف تغطيات</a>
+                        <a href="#" data-tab="coverage_sites" class="custom-tab">إدارة التغطيات</a>
+                        <a href="#" data-tab="coverage_applicants" class="custom-tab">مقدمين التغطيات</a>
+                        <a href="#" data-tab="transfers" class="custom-tab">نقل الحراس</a>
+                        <a href="#" data-tab="leaves" class="custom-tab">الإجازات</a>
+                        <a href="#" data-tab="loans" class="custom-tab">السلف</a>
+                        <a href="#" data-tab="resignations" class="custom-tab">الاستقالات</a>
+                        <a href="#" data-tab="logs" class="custom-tab">السجل</a>
+                    `;
+                    hrTabsContainer.addEventListener('click', e => { e.preventDefault(); if(e.target.closest('.custom-tab')) loadHrDashboard(e.target.closest('.custom-tab').dataset.tab); });
+                }
+
+                // Consolidated click listener for dynamically added buttons
                 document.body.addEventListener('click', async (e) => {
                     const button = e.target.closest('button');
                     if (!button) return;
 
+                    // Logout Button
+                    if (button.classList.contains('logout-btn')) {
+                        logout();
+                    }
+
+                    // Add Guard Button (HR Dashboard)
                     if(button.id === 'add-guard-btn') {
-                        document.getElementById('guard-form-title').textContent = 'إضافة حارس جديد';
+                        document.getElementById('guard-form-title-text').textContent = 'إضافة حارس جديد';
                         document.getElementById('guard-form-id').value = '';
-                        document.getElementById('guard-form-national-id').disabled = false;
                         document.getElementById('guard-form-national-id').value = '';
                         document.getElementById('guard-form-name').value = '';
                         document.getElementById('guard-form-mobile').value = '';
                         document.getElementById('guard-form-password').value = '';
-                        document.getElementById('guard-form-title').value = '';
+                        document.getElementById('guard-form-job-title').value = '';
                         document.getElementById('guard-form-location').value = '';
                         document.getElementById('guard-form-region').value = '';
                         document.getElementById('guard-form-project').value = '';
+                        document.getElementById('guard-form-status').value = 'اساسي';
                         document.getElementById('guard-form-basic-salary').value = '';
                         document.getElementById('guard-form-housing-allowance').value = '';
                         document.getElementById('guard-form-transport-allowance').value = '';
                         document.getElementById('guard-form-other-allowances').value = '';
+                        document.getElementById('guard-form-national-id').disabled = false;
                         const scheduleContainer = document.getElementById('guard-form-schedule-container');
                         const days = { sunday: 'الأحد', monday: 'الإثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس', friday: 'الجمعة', saturday: 'السبت' };
                         scheduleContainer.innerHTML = Object.entries(days).map(([dayKey, dayName]) => `
@@ -759,406 +1284,395 @@
                             </div>`).join('');
                         showModal('guard-form-modal');
                     }
+                    
+                    // Add Staff Button (HR Dashboard)
                     if(button.id === 'add-staff-btn') {
-                         const role = button.dataset.role;
-                         const roleNames = { 'hr': 'موظف موارد بشرية', 'admin': 'مشرف', 'operations': 'موظف عمليات'};
-                         document.getElementById('staff-form-title').textContent = `إضافة ${roleNames[role]} جديد`;
-                         document.getElementById('staff-form-id').value = '';
-                         document.getElementById('staff-form-role').value = role;
-                         document.getElementById('staff-form-name').value = '';
-                         document.getElementById('staff-form-username').value = '';
-                         document.getElementById('staff-form-username').disabled = false;
-                         document.getElementById('staff-form-password').value = '';
-                         document.getElementById('staff-form-title-input').value = '';
-                         document.getElementById('staff-form-title-container').style.display = role === 'hr' ? 'block' : 'none';
-                         document.getElementById('staff-form-assignment-container').style.display = (role === 'admin' || role === 'operations') ? 'block' : 'none';
-                         document.getElementById('staff-form-assignments-list').innerHTML = ''; // Clear previous
-                         addAssignmentRow(); // Add the first row
-                         showModal('staff-form-modal');
+                          const role = button.dataset.role;
+                          const roleNames = { 'hr': 'موظف موارد بشرية', 'admin': 'مشرف', 'operations': 'موظف عمليات'};
+                          document.getElementById('staff-form-title').textContent = `إضافة ${roleNames[role]} جديد`;
+                          document.getElementById('staff-form-id').value = '';
+                          document.getElementById('staff-form-role').value = role;
+                          document.getElementById('staff-form-name').value = '';
+                          document.getElementById('staff-form-username').value = '';
+                          document.getElementById('staff-form-username').disabled = false;
+                          document.getElementById('staff-form-password').value = '';
+                          document.getElementById('staff-form-title-input').value = '';
+                          document.getElementById('staff-form-title-container').style.display = role === 'hr' ? 'block' : 'none';
+                          document.getElementById('staff-form-assignment-container').style.display = (role === 'admin' || role === 'operations') ? 'block' : 'none';
+                          document.getElementById('staff-form-assignments-list').innerHTML = '';
+                          addAssignmentRow();
+                          showModal('staff-form-modal');
                     }
-                     if(button.id === 'add-assignment-btn'){
+
+                    // Add Assignment Row Button (Staff Modal)
+                    if(button.id === 'add-assignment-btn'){
                         addAssignmentRow();
                     }
+                    
+                    // Transfer Request Button (Admin Dashboard)
+                    if(button.id === 'transfer-request-btn') {
+                        await fetchAllGuards();
+                        const selectEl = document.getElementById('transfer-guard-select');
+                        const supervisorAssignments = state.currentUser.assignments || [];
+                        const assignedGuards = state.allGuardsData.filter(guard => {
+                           return supervisorAssignments.some(asn => 
+                            (!asn.region || asn.region === guard.region) &&
+                            (!asn.location || asn.location === guard.location) &&
+                            (!asn.project || asn.project === guard.project)
+                           );
+                        });
+                        selectEl.innerHTML = assignedGuards.map(g => `<option value="${g.id}" data-project="${g.project}">${g.name} - ${g.project}</option>`).join('');
+                        showModal('transfer-request-modal');
+                    }
+                    
+                    // Export CSV Button (Admin Dashboard)
+                    if(button.id === 'admin-export-csv-btn' || button.id === 'hr-export-csv-btn') {
+                        const targetTableSelector = button.dataset.targetTable;
+                        const activeTab = document.querySelector('.custom-tab.active-tab')?.dataset.tab || 'export';
+                        const filename = `Arkanat-${activeTab}-${new Date().toISOString().split('T')[0]}.csv`;
+                        exportTableToCSV(targetTableSelector, filename);
+                    }
                 });
                 
-                dom.adminTableContainer.addEventListener('click', async (e) => {
-                    const button = e.target.closest('button.action-btn');
-                    if (!button) return;
+                if (dom.coverageGuardTabContent) {
+                    dom.coverageGuardTabContent.addEventListener('click', async (e) => {
+                         const button = e.target.closest('.apply-for-coverage-btn');
+                         if(!button || button.disabled) return;
 
-                    const id = button.dataset.id || button.dataset.attendanceId;
-                    
-                    if (button.classList.contains('supervisor-checkout-btn')) {
-                         const guardId = button.dataset.guardId;
-                         await fetchAllGuards();
-                         const {data: attendanceRecord, error: fetchError} = await _supabase.from('attendance').select('created_at, guardName').eq('id', id).single();
-                         if (fetchError || !attendanceRecord) return showAlert('خطأ: لم يتم العثور على سجل الحضور.');
-                         
-                         const confirmed = await confirmAction('تأكيد الخروج', `هل أنت متأكد من تسجيل الخروج للحارس ${attendanceRecord.guardName}؟`);
-                         if (!confirmed) return;
+                         const coverageId = button.dataset.coverageId;
+                         document.getElementById('coverage-notes-coverage-id').value = coverageId;
+                         document.getElementById('coverage-notes-textarea').value = '';
+                         showModal('coverage-notes-modal');
+                    });
+                }
+                
+                if (document.getElementById('submit-coverage-notes-btn')) {
+                    document.getElementById('submit-coverage-notes-btn').addEventListener('click', async () => {
+                        const coverageId = document.getElementById('coverage-notes-coverage-id').value;
+                        const notes = document.getElementById('coverage-notes-textarea').value.trim();
 
-                         showLoading(true);
-                         const checkoutTime = new Date();
-                         const workDurationMs = checkoutTime - new Date(attendanceRecord.created_at);
-                         const durationString = formatDuration(workDurationMs);
-                         const entitlement = calculateEntitlement(guardId, workDurationMs);
-                         
-                         const updateData = { checkout_at: checkoutTime.toISOString(), work_duration: durationString, daily_entitlement: entitlement };
-                         
-                         const { error } = await _supabase.from('attendance').update(updateData).eq('id', id);
-                         if (error) { 
-                             showLoading(false); 
-                             console.error("Supervisor checkout error:", error);
-                             return showAlert(`فشل تسجيل الخروج. تأكد من أن جميع الأعمدة المطلوبة موجودة في قاعدة البيانات.`);
-                         }
-                         
-                         await logActivity(state.currentUser.name, `قام بتسجيل خروج للحارس`, `اسم الحارس: ${attendanceRecord.guardName}, مدة العمل: ${durationString}`);
+                        showLoading(true);
+                         const { error } = await _supabase.from('coverage_applications').insert({
+                             coverage_id: coverageId,
+                             guard_id: state.currentGuard.id,
+                             status: 'Pending',
+                             notes: notes || null
+                         });
                          showLoading(false);
-                         showAlert('تم تسجيل الخروج بنجاح.');
-                         loadAdminDashboard();
-                         return;
-                    }
+                         closeModal();
 
-                    let newStatus = '';
-                    if (button.classList.contains('approve-btn')) newStatus = 'Approved';
-                    else if (button.classList.contains('cancel-btn')) newStatus = 'Cancelled';
-                    else if (button.classList.contains('modify-btn')) newStatus = 'Pending';
-                    if (!newStatus) return;
+                         if(error) {
+                             if (error.message.includes('unique_application')) {
+                                 showAlert('لقد قدمت على هذه التغطية بالفعل.');
+                             } else {
+                                 showAlert('فشل التقديم على التغطية. الرجاء المحاولة مرة أخرى.');
+                                 console.error('Apply for coverage error:', error);
+                             }
+                         } else {
+                             showAlert('تم التقديم بنجاح!');
+                             // Reload the tab to update the button state
+                             loadCoverageGuardDashboard('available_coverages');
+                         }
+                    });
+                }
 
-                    if (newStatus === 'Cancelled' || newStatus === 'Pending') {
-                        const confirmed = await confirmAction('تأكيد الإجراء', `هل أنت متأكد من ${newStatus === 'Cancelled' ? 'إلغاء' : 'تعديل'} هذا السجل؟`);
-                        if (!confirmed) return;
-                    }
-                    showLoading(true);
-                    const { data, error } = await _supabase.from('attendance').update({ status: newStatus }).eq('id', id).select().single();
-                    showLoading(false);
-                    if(error) return showAlert(`فشلت العملية.`);
-                    const actor = state.currentUser.name;
-                    const action = { Approved: 'قام باعتماد الحضور', Cancelled: 'قام بإلغاء الحضور', Pending: `قام بتعديل حالة الحضور من (${button.dataset.oldStatus}) إلى (معلق)`}[newStatus];
-                    await logActivity(actor, action, `للحارس: ${data?.guardName}`);
-                    loadAdminDashboard();
-                });
 
-                dom.hrTabContent.addEventListener('click', async (e) => {
-                    const button = e.target.closest('button');
-                    if (!button) return;
+                if (dom.adminTabContent) {
+                    dom.adminTabContent.addEventListener('click', async (e) => {
+                        const button = e.target.closest('button.action-btn');
+                        if (!button) return;
 
-                    if (button.classList.contains('edit-staff-btn')) {
-                        const {data: allStaff, error} = await _supabase.from('staff').select('*');
-                        if (error) return showAlert('فشل في جلب بيانات الموظفين');
-                        const staffId = button.dataset.staffId;
-                        const staff = allStaff.find(s => s.id.toString() === staffId);
-                        if (!staff) return showAlert('لم يتم العثور على الموظف.');
-
-                        document.getElementById('staff-form-title').textContent = `تعديل بيانات: ${staff.name}`;
-                        document.getElementById('staff-form-id').value = staff.id;
-                        document.getElementById('staff-form-role').value = staff.role;
-                        document.getElementById('staff-form-name').value = staff.name || '';
-                        document.getElementById('staff-form-username').value = staff.username || '';
-                        document.getElementById('staff-form-username').disabled = true;
-                        document.getElementById('staff-form-password').value = '';
-                        document.getElementById('staff-form-title-input').value = staff.job_title || '';
-                        
-                        const titleContainer = document.getElementById('staff-form-title-container');
-                        const assignmentContainer = document.getElementById('staff-form-assignment-container');
-                        const assignmentsList = document.getElementById('staff-form-assignments-list');
-                        titleContainer.style.display = staff.role === 'hr' ? 'block' : 'none';
-                        assignmentContainer.style.display = ['admin', 'operations'].includes(staff.role) ? 'block' : 'none';
-                        assignmentsList.innerHTML = '';
-
-                        if (['admin', 'operations'].includes(staff.role)) {
-                           const assignments = staff.assignments && staff.assignments.length > 0 ? staff.assignments : [{}]; // Start with one row if none exist
-                           assignments.forEach(assignment => addAssignmentRow(assignment));
-                        }
-                        
-                        showModal('staff-form-modal');
-                    }
-                    if (button.classList.contains('edit-guard-btn')) {
-                        const guardId = button.dataset.guardId;
-                        const guard = state.allGuardsData.find(g => g.id.toString() === guardId);
-                        if (!guard) return showAlert('لم يتم العثور على الحارس.');
-
-                        document.getElementById('guard-form-title').textContent = `تعديل بيانات: ${guard.name}`;
-                        document.getElementById('guard-form-id').value = guard.id;
-                        document.getElementById('guard-form-name').value = guard.name || '';
-                        document.getElementById('guard-form-national-id').value = guard.id || '';
-                        document.getElementById('guard-form-national-id').disabled = true;
-                        document.getElementById('guard-form-mobile').value = guard.mobile_number || '';
-                        document.getElementById('guard-form-password').value = '';
-                        document.getElementById('guard-form-title').value = guard.job_title || '';
-                        document.getElementById('guard-form-location').value = guard.location || '';
-                        document.getElementById('guard-form-region').value = guard.region || '';
-                        document.getElementById('guard-form-project').value = guard.project || '';
-                        document.getElementById('guard-form-basic-salary').value = guard.basic_salary || 0;
-                        document.getElementById('guard-form-housing-allowance').value = guard.housing_allowance || 0;
-                        document.getElementById('guard-form-transport-allowance').value = guard.transport_allowance || 0;
-                        document.getElementById('guard-form-other-allowances').value = guard.other_allowances || 0;
-                        
-                        const scheduleContainer = document.getElementById('guard-form-schedule-container');
-                        const days = { sunday: 'الأحد', monday: 'الإثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس', friday: 'الجمعة', saturday: 'السبت' };
-                        scheduleContainer.innerHTML = Object.entries(days).map(([dayKey, dayName]) => {
-                           const shift = guard.weekly_schedule ? (guard.weekly_schedule[dayKey] || {}) : {};
-                           return `<div class="grid grid-cols-5 gap-2 items-center">
-                                <label class="col-span-1 text-gray-300">${dayName}</label>
-                                <label class="text-xs text-center">من</label>
-                                <input type="time" data-day="${dayKey}" data-type="start" class="col-span-1 p-1 bg-slate-700 border border-slate-600 rounded-md" value="${shift.start || ''}">
-                                <label class="text-xs text-center">إلى</label>
-                                <input type="time" data-day="${dayKey}" data-type="end" class="col-span-1 p-1 bg-slate-700 border border-slate-600 rounded-md" value="${shift.end || ''}">
-                            </div>`;
-                        }).join('');
-                        
-                        showModal('guard-form-modal');
-                    }
-                    if (button.classList.contains('view-entitlement-btn')) {
-                        const guardId = button.dataset.guardId;
-                        const guard = state.allGuardsData.find(g => g.id.toString() === guardId);
-                        if (!guard) return;
-                        
-                        showLoading(true);
-                        const {data: records, error} = await _supabase.from('attendance').select('*').eq('guardId', guardId).order('created_at', {ascending: false});
-                        showLoading(false);
-
-                        dom.entitlementModal.title.textContent = `تفاصيل مستحقات: ${guard.name}`;
-                        let totalEntitlement = 0;
-                        let detailsHTML = `<div class="space-y-2">`;
-                        if (records && records.length > 0) {
-                             detailsHTML += `<div class="max-h-64 overflow-y-auto">
-                                <table class="w-full text-right text-sm text-white">
-                                    <thead class="bg-slate-700"><tr>
-                                        <th class="p-2">التاريخ</th><th class="p-2">مدة العمل</th><th class="p-2">المستحق</th>
-                                    </tr></thead>
-                                    <tbody class="divide-y divide-slate-600">`;
-                            records.forEach(r => {
-                                if(r.daily_entitlement) {
-                                    totalEntitlement += r.daily_entitlement;
-                                    detailsHTML += `<tr>
-                                        <td class="p-2">${new Date(r.created_at).toLocaleDateString('ar-SA')}</td>
-                                        <td class="p-2">${r.work_duration || '-'}</td>
-                                        <td class="p-2">${r.daily_entitlement.toFixed(2)} ريال</td>
-                                    </tr>`;
-                                }
-                            });
-                             detailsHTML += `</tbody></table></div>`;
-                        } else {
-                            detailsHTML += `<p>لا توجد سجلات مستحقات لهذا الحارس.</p>`;
-                        }
-                        detailsHTML += `<div class="mt-4 pt-4 border-t border-slate-600 text-lg font-bold flex justify-between"><span>الإجمالي:</span><span>${totalEntitlement.toFixed(2)} ريال</span></div>`;
-
-                        detailsHTML += '</div>';
-                        dom.entitlementModal.body.innerHTML = detailsHTML;
-                        showModal('entitlement-details-modal');
-                    }
-                    if (button.classList.contains('view-schedule-btn')) {
-                        const guardId = button.dataset.guardId;
-                        const guard = state.allGuardsData.find(g => g.id.toString() === guardId);
-                        if (!guard) return;
-                        dom.scheduleModal.title.textContent = `جدول دوام: ${guard.name}`;
-                        const days = { sunday: 'الأحد', monday: 'الإثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس', friday: 'الجمعة', saturday: 'السبت' };
-                        const formatTime = (time) => time ? new Date(`1970-01-01T${time}`).toLocaleTimeString('ar-SA', {hour: '2-digit', minute:'2-digit', hour12: true}) : '---';
-                        let scheduleHTML = '<div class="space-y-3">';
-                        if (guard.weekly_schedule) {
-                            for (const [dayKey, dayName] of Object.entries(days)) {
-                                const shift = guard.weekly_schedule[dayKey];
-                                scheduleHTML += `<div class="flex justify-between items-center bg-slate-700 p-2 rounded-md"><strong>${dayName}:</strong> <span>${shift && shift.start ? `${formatTime(shift.start)} - ${formatTime(shift.end)}` : 'راحة'}</span></div>`;
-                            }
-                        } else { scheduleHTML += '<p>لم يتم تحديد جدول بعد.</p>'; }
-                        scheduleHTML += '</div>';
-                        dom.scheduleModal.body.innerHTML = scheduleHTML;
-                        showModal('schedule-display-modal');
-                    }
-                    if (button.classList.contains('delete-guard-btn')) {
-                        const guardId = button.dataset.guardId;
-                        const guardName = button.dataset.guardName;
-                        const confirmed = await confirmAction('تأكيد الحذف', `هل أنت متأكد من حذف الحارس ${guardName}؟ لا يمكن التراجع عن هذا الإجراء.`);
-                        if (confirmed) {
-                            showLoading(true);
-                            const { error } = await _supabase.from('guards').delete().eq('id', guardId);
-                            showLoading(false);
-                            if (error) { showAlert('فشل حذف الحارس. قد يكون مرتبطًا بسجلات أخرى.'); console.error('Delete error:', error);
-                            } else {
-                                showAlert('تم حذف الحارس بنجاح.');
-                                await logActivity(state.currentUser.name, 'قام بحذف حارس', `اسم الحارس: ${guardName}, رقم الهوية: ${guardId}`);
-                                loadHrDashboard('guards');
-                            }
-                        }
-                    }
-                     if (button.classList.contains('delete-staff-btn')) {
-                        const staffId = button.dataset.staffId;
-                        const staffName = button.dataset.staffName;
-                        const currentTab = dom.hrTabs.querySelector('.active-tab').dataset.tab;
-                        const confirmed = await confirmAction('تأكيد الحذف', `هل أنت متأكد من حذف الموظف ${staffName}؟`);
-                        if (confirmed) {
-                            showLoading(true);
-                            const { error } = await _supabase.from('staff').delete().eq('id', staffId);
-                            showLoading(false);
-                            if (error) { showAlert('فشل حذف الموظف.'); console.error('Delete error:', error);
-                            } else {
-                                showAlert('تم حذف الموظف بنجاح.');
-                                await logActivity(state.currentUser.name, 'قام بحذف موظف', `اسم الموظف: ${staffName}`);
-                                loadHrDashboard(currentTab);
-                            }
-                        }
-                    }
-                    if (button.classList.contains('delete-record-btn')) {
                         const id = button.dataset.id;
-                        const table = button.dataset.table;
-                        const confirmed = await confirmAction('تأكيد الحذف', `هل أنت متأكد من حذف هذا السجل بشكل نهائي؟`);
-                        if (confirmed) {
-                             showLoading(true);
-                             const { error } = await _supabase.from(table).delete().eq('id', id);
-                             showLoading(false);
-                             if (error) { showAlert('فشل حذف السجل.'); }
-                             else { showAlert('تم حذف السجل بنجاح.'); await logActivity(state.currentUser.name, `قام بحذف سجل من جدول ${table}`, `رقم السجل: ${id}`); loadHrDashboard(dom.hrTabs.querySelector('.active-tab').dataset.tab); }
+                        const currentTab = document.querySelector('#admin-ops-tabs .active-tab').dataset.tab;
+                        const role = state.currentRole;
+
+                        // Supervisor manually checks out a guard
+                        if (button.classList.contains('supervisor-checkout-btn')) {
+                            const attendanceId = button.dataset.attendanceId;
+                            const guardId = button.dataset.guardId;
+                            const { data: attendanceRecord } = await _supabase.from('attendance').select('guard_name, created_at').eq('id', attendanceId).single();
+                            if (!await confirmAction('تأكيد الخروج', `هل أنت متأكد من تسجيل الخروج للحارس ${attendanceRecord.guard_name}؟`)) return;
+
+                            showLoading(true);
+                            try {
+                                const checkoutTime = new Date();
+                                const workDurationMs = checkoutTime - new Date(attendanceRecord.created_at);
+                                const guard = state.allGuardsData.find(g => g.id.toString() === guardId);
+                                const entitlement = calculateEntitlement(guard, workDurationMs);
+                                await _supabase.from('attendance').update({
+                                    checkout_at: checkoutTime.toISOString(),
+                                    work_duration: formatDuration(workDurationMs),
+                                    daily_entitlement: entitlement,
+                                    action_by: state.currentUser.name
+                                }).eq('id', attendanceId);
+                                await logActivity(state.currentUser.name, 'قام بتسجيل خروج للحارس', `اسم الحارس: ${attendanceRecord.guard_name}`);
+                                showAlert('تم تسجيل الخروج بنجاح. السجل بانتظار الاعتماد.');
+                            } catch (error) {
+                                showAlert(`حدث خطأ: ${error.message}`);
+                            } finally {
+                                showLoading(false);
+                                loadAdminDashboard(currentTab);
+                            }
+                            return;
                         }
-                    }
-                    if (button.classList.contains('hr-approve-btn') || button.classList.contains('hr-reject-btn')) {
-                        const id = button.dataset.id;
-                        const newStatus = button.classList.contains('hr-approve-btn') ? 'Approved' : 'Rejected';
-                        const requestType = button.dataset.type;
-                        const requestName = requestType === 'leave_requests' ? 'إجازة' : 'سلفة';
-                        const confirmed = await confirmAction('تأكيد الإجراء', `هل أنت متأكد من ${newStatus === 'Approved' ? 'الموافقة على' : 'رفض'} هذا الطلب؟`);
-                        if (!confirmed) return;
-                        showLoading(true);
-                        const { error } = await _supabase.from(requestType).update({ status: newStatus }).eq('id', id);
-                        await logActivity(state.currentUser.name, `قام بـ${newStatus === 'Approved' ? 'الموافقة على' : 'رفض'} طلب ${requestName}`, `للسجل رقم: ${id}`);
-                        showLoading(false);
-                        if (error) showAlert('فشلت العملية.');
-                        else loadHrDashboard(requestType === 'leave_requests' ? 'leaves' : 'loans');
-                    }
-                    if (button.classList.contains('financial-btn')) {
-                        document.getElementById('financial-transaction-guard-id').value = button.dataset.guardId;
-                        const type = button.dataset.type;
-                        document.getElementById('financial-transaction-type').value = type;
-                        document.getElementById('financial-transaction-title').textContent = type === 'deduction' ? 'إضافة خصم' : 'إضافة زيادة';
-                        document.getElementById('financial-transaction-amount').value = '';
-                        document.getElementById('financial-transaction-reason').value = '';
-                        showModal('financial-transaction-modal');
-                    }
-                });
-                
-                const hrTabsContainer = dom.hrTabs; hrTabsContainer.innerHTML = `<a href="#" data-tab="guards" class="hr-tab">الحراس</a><a href="#" data-tab="salaries" class="hr-tab">الرواتب</a><a href="#" data-tab="hr_staff" class="hr-tab">الموارد البشرية</a><a href="#" data-tab="supervisors" class="hr-tab">المشرفون</a><a href="#" data-tab="operations" class="hr-tab">العمليات</a><a href="#" data-tab="attendance" class="hr-tab">الحضور</a><a href="#" data-tab="leaves" class="hr-tab">الإجازات</a><a href="#" data-tab="loans" class="hr-tab">السلف</a><a href="#" data-tab="logs" class="hr-tab">السجل</a>`;
-                hrTabsContainer.addEventListener('click', e => { e.preventDefault(); if(e.target.closest('.hr-tab')) loadHrDashboard(e.target.closest('.hr-tab').dataset.tab); });
 
-                document.getElementById('export-csv-btn').addEventListener('click', async () => {
-                    showLoading(true); const { data: records, error } = await _supabase.from('attendance').select('*').order('created_at', { ascending: false }); showLoading(false); if (error || !records || records.length === 0) return showAlert("لا توجد بيانات لتصديرها.");
-                    let csv = "\uFEFFاسم الحارس,رقم الهوية,وقت الحضور,وقت الخروج,مدة العمل,الملاحظات,الحالة,المستحق اليومي\n";
-                    records.forEach(r => { csv += `"${r.guardName}","${r.guardId}","${new Date(r.created_at).toLocaleString('ar-SA')}","${r.checkout_at ? new Date(r.checkout_at).toLocaleString('ar-SA') : ''}","${r.work_duration || ''}","${r.notes || ''}","${r.status || 'Pending'}","${r.daily_entitlement || ''}"\n`; });
-                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a"); link.setAttribute("href", URL.createObjectURL(blob)); link.setAttribute("download", `Arkanat-Attendance-${new Date().toISOString().split('T')[0]}.csv`); link.click(); link.remove();
-                });
-                
-                document.getElementById('submit-guard-form-btn').addEventListener('click', async () => {
-                    const guardId = document.getElementById('guard-form-id').value;
-                    const schedule = {};
-                    document.querySelectorAll('#guard-form-schedule-container input[type="time"]').forEach(input => { const day = input.dataset.day; const type = input.dataset.type; if (!schedule[day]) schedule[day] = {}; schedule[day][type] = input.value || null; });
-                    
-                    const guardData = { id: document.getElementById('guard-form-national-id').value.trim(), name: document.getElementById('guard-form-name').value.trim(), mobile_number: document.getElementById('guard-form-mobile').value.trim() || null, job_title: document.getElementById('guard-form-title').value.trim() || null, location: document.getElementById('guard-form-location').value.trim() || null, region: document.getElementById('guard-form-region').value.trim() || null, project: document.getElementById('guard-form-project').value.trim() || null, basic_salary: parseFloat(document.getElementById('guard-form-basic-salary').value) || 0, housing_allowance: parseFloat(document.getElementById('guard-form-housing-allowance').value) || 0, transport_allowance: parseFloat(document.getElementById('guard-form-transport-allowance').value) || 0, other_allowances: parseFloat(document.getElementById('guard-form-other-allowances').value) || 0, weekly_schedule: schedule };
-                    const password = document.getElementById('guard-form-password').value.trim();
-                    if (password) guardData.password = password;
+                        // Approve a PENDING attendance record
+                        if (button.classList.contains('approve-attendance-btn')) {
+                            if (!await confirmAction('تأكيد الإجراء', `هل أنت متأكد من اعتماد هذا السجل؟`)) return;
+                            showLoading(true);
+                            const { data: rec, error: fetchError } = await _supabase.from('attendance').select('checkout_at').eq('id', id).single();
+                            if (fetchError || !rec) {
+                                showLoading(false);
+                                showAlert('لم يتم العثور على سجل الحضور.');
+                                return;
+                            }
+                            if (!rec.checkout_at) {
+                                showLoading(false);
+                                showAlert('لا يمكن اعتماد سجل حضور لم يتم تسجيل الانصراف له بعد.');
+                                return;
+                            }
+                            const { error } = await _supabase.from('attendance').update({ status: 'Approved', action_by: state.currentUser.name }).eq('id', id);
+                            showLoading(false);
+                            if (error) showAlert(`فشل الاعتماد: ${error.message}`);
+                            loadAdminDashboard(currentTab);
+                            return;
+                        }
+                        
+                        // Cancel a PENDING attendance record
+                        if (button.classList.contains('cancel-attendance-btn')) {
+                            if (!await confirmAction('تأكيد الإجراء', `هل أنت متأكد من إلغاء هذا السجل؟`)) return;
+                            showLoading(true);
+                            const { error } = await _supabase.from('attendance').update({ status: 'Cancelled', action_by: state.currentUser.name }).eq('id', id);
+                            showLoading(false);
+                            if (error) showAlert(`فشل الإلغاء: ${error.message}`);
+                            loadAdminDashboard(currentTab);
+                            return;
+                        }
+                        
+                        // Modify a completed attendance record back to pending (Ops only)
+                        if (button.classList.contains('modify-attendance-btn') && role === 'operations') {
+                            if (!await confirmAction('تأكيد التعديل', `هل أنت متأكد من إعادة هذا السجل إلى حالة "معلق"؟`)) return;
+                            showLoading(true);
+                            const { error } = await _supabase.from('attendance').update({ 
+                                status: 'Pending', 
+                                action_by: state.currentUser.name
+                            }).eq('id', id);
+                            showLoading(false);
+                            if (error) showAlert(`فشل التعديل: ${error.message}`);
+                            loadAdminDashboard(currentTab);
+                            return;
+                        }
+                        
+                        // Approve other request types
+                        if (button.classList.contains('approve-request-btn')) {
+                            const tableName = button.dataset.type;
+                            if (!await confirmAction('تأكيد الإجراء', `هل أنت متأكد من الموافقة على هذا الطلب؟`)) return;
+                            showLoading(true);
+                            const { error } = await _supabase.from(tableName).update({ status: 'Approved', processed_by: state.currentUser.name }).eq('id', id);
+                            showLoading(false);
+                            if (error) showAlert('فشلت العملية'); else loadAdminDashboard(currentTab);
+                            return;
+                        }
+                        
+                        // Approve a transfer request (Ops only)
+                        if (button.classList.contains('approve-transfer-btn') && role === 'operations') {
+                            const transferId = button.dataset.id;
+                            const guardId = button.dataset.guardId;
+                            const newLocation = button.dataset.location;
+                            const newProject = button.dataset.project;
+                            if (!await confirmAction('تأكيد النقل', `هل توافق على نقل الحارس إلى ${newProject}؟`)) return;
 
-                    if (!guardData.id || !guardData.name) return showAlert('رقم الهوية والاسم حقول إلزامية.');
-                    
-                    showLoading(true);
-                    let error, successMessage, logAction, logDetails;
-                    if (guardId) { // Update
-                        delete guardData.id; 
-                        ({ error } = await _supabase.from('guards').update(guardData).eq('id', guardId));
-                        successMessage = 'تم تحديث بيانات الحارس بنجاح!';
-                        logAction = 'قام بتحديث بيانات حارس';
-                        logDetails = `اسم الحارس: ${guardData.name}`;
-                    } else { // Insert
-                        if (!password) { showLoading(false); return showAlert('كلمة المرور إلزامية عند إضافة حارس جديد.'); }
-                        ({ error } = await _supabase.from('guards').insert(guardData));
-                        successMessage = 'تمت إضافة الحارس بنجاح!';
-                        logAction = 'قام بإضافة حارس جديد';
-                        logDetails = `اسم الحارس: ${guardData.name}`;
-                    }
-                    showLoading(false);
-                    if (error) { if (error.message.includes('duplicate key')) showAlert('فشل الإضافة. رقم الهوية هذا مسجل بالفعل.'); else showAlert(`حدث خطأ: ${error.message}`); return console.error(error); }
-                    await logActivity(state.currentUser.name, logAction, logDetails);
+                            showLoading(true);
+                            try {
+                                const { error: guardError } = await _supabase.from('guards').update({ location: newLocation, project: newProject }).eq('id', guardId);
+                                if (guardError) throw guardError;
+
+                                const { error: transferError } = await _supabase.from('transfer_requests').update({ status: 'Approved', processed_by: state.currentUser.name }).eq('id', transferId);
+                                if (transferError) throw transferError;
+                                
+                                showAlert('تمت الموافقة على النقل بنجاح.');
+                            } catch(error) {
+                                showAlert(`حدث خطأ أثناء عملية النقل: ${error.message}`);
+                            } finally {
+                                showLoading(false);
+                                loadAdminDashboard(currentTab);
+                            }
+                            return;
+                        }
+
+                        // Reject ANY request type
+                        if (button.classList.contains('reject-request-btn')) {
+                            const tableName = button.dataset.type;
+                            if (tableName === 'transfer_requests') {
+                                document.getElementById('rejection-item-id').value = id;
+                                document.getElementById('rejection-table-name').value = tableName;
+                                document.getElementById('rejection-reason-input').value = '';
+                                showModal('rejection-reason-modal');
+                            } else {
+                                if (!await confirmAction('تأكيد الإجراء', `هل أنت متأكد من رفض هذا الطلب؟`)) return;
+                                showLoading(true);
+                                const { error } = await _supabase.from(tableName).update({ status: 'Rejected', processed_by: state.currentUser.name }).eq('id', id);
+                                showLoading(false);
+                                if (error) showAlert('فشلت العملية'); else loadAdminDashboard(currentTab);
+                            }
+                            return;
+                        }
+                    });
+                }
+
+                if (dom.hrTabContent) {
+                    dom.hrTabContent.addEventListener('click', async(e) => {
+                        const button = e.target.closest('button');
+                        if (!button) return;
+
+                        if (button.id === 'add-coverage-guard-btn') {
+                            document.getElementById('coverage-guard-form-title').textContent = 'إضافة حارس تغطية جديد';
+                            document.getElementById('coverage-guard-form-id').value = '';
+                            document.getElementById('coverage-guard-form-national-id').value = '';
+                            document.getElementById('coverage-guard-form-name').value = '';
+                            document.getElementById('coverage-guard-form-mobile').value = '';
+                            document.getElementById('coverage-guard-form-password').value = '';
+                            document.getElementById('coverage-guard-form-national-id').disabled = false;
+                            showModal('coverage-guard-form-modal');
+                        }
+
+                        if (button.id === 'add-coverage-site-btn') {
+                             document.getElementById('coverage-site-form-title').textContent = 'إنشاء تغطية جديدة';
+                             document.getElementById('coverage-site-form-id').value = '';
+                             document.getElementById('coverage-site-project').value = '';
+                             document.getElementById('coverage-site-location').value = '';
+                             document.getElementById('coverage-site-date').value = '';
+                             document.getElementById('coverage-site-day').value = 'السبت';
+                             document.getElementById('coverage-site-start-time').value = '';
+                             document.getElementById('coverage-site-end-time').value = '';
+                             document.getElementById('coverage-site-payout').value = '';
+                             showModal('coverage-site-form-modal');
+                        }
+                        // Handle coverage application actions
+                        if(button.classList.contains('accept-coverage-app-btn')) {
+                            const appId = button.dataset.appId;
+                            const coverageId = button.dataset.coverageId;
+                            const guardId = button.dataset.guardId;
+                            const guardName = button.dataset.guardName;
+                            if (!await confirmAction('تأكيد القبول', `هل أنت متأكد من قبول ${guardName} لهذه التغطية؟`)) return;
+                            showLoading(true);
+                            // Set application to accepted
+                            await _supabase.from('coverage_applications').update({ status: 'Accepted' }).eq('id', appId);
+                            // Assign guard to coverage
+                            await _supabase.from('coverages').update({ status: 'Taken', assigned_guard_id: guardId, assigned_guard_name: guardName }).eq('id', coverageId);
+                            // Reject other applications for the same coverage
+                            await _supabase.from('coverage_applications').update({ status: 'Rejected' }).eq('coverage_id', coverageId).neq('id', appId);
+                            showLoading(false);
+                            showAlert('تم قبول الحارس وتعيينه للتغطية بنجاح.');
+                            loadHrDashboard('coverage_applicants');
+                        }
+                        else if(button.classList.contains('reject-coverage-app-btn')) {
+                            const appId = button.dataset.appId;
+                            if (!await confirmAction('تأكيد الرفض', 'هل أنت متأكد من رفض هذا الطلب؟')) return;
+                            showLoading(true);
+                            await _supabase.from('coverage_applications').update({ status: 'Rejected' }).eq('id', appId);
+                            showLoading(false);
+                            loadHrDashboard('coverage_applicants');
+                        }
+                        else if(button.classList.contains('delete-coverage-app-btn')) {
+                            const appId = button.dataset.appId;
+                            if (!await confirmAction('تأكيد الحذف', 'هل أنت متأكد من حذف طلب التقديم هذا؟')) return;
+                            showLoading(true);
+                            await _supabase.from('coverage_applications').delete().eq('id', appId);
+                            showLoading(false);
+                            loadHrDashboard('coverage_applicants');
+                        }
+                    });
+                }
+                 // *** NEW: Added button listeners ***
+                document.getElementById('login-back-btn').addEventListener('click', () => showPage('landing-page'));
+                document.getElementById('alert-close-btn').addEventListener('click', closeModal);
+                document.querySelectorAll('.modal-close-btn').forEach(btn => btn.addEventListener('click', closeModal));
+            };
+
+            const addAssignmentRow = (assignment = {}) => {
+                const list = document.getElementById('staff-form-assignments-list');
+                const row = document.createElement('div');
+                row.className = 'assignment-row grid grid-cols-3 gap-2';
+                row.innerHTML = `
+                    <input type="text" data-type="region" placeholder="المنطقة" class="p-2 w-full border bg-slate-700 border-slate-600 rounded-md" value="${assignment.region || ''}">
+                    <input type="text" data-type="location" placeholder="الموقع" class="p-2 w-full border bg-slate-700 border-slate-600 rounded-md" value="${assignment.location || ''}">
+                    <input type="text" data-type="project" placeholder="المشروع" class="p-2 w-full border bg-slate-700 border-slate-600 rounded-md" value="${assignment.project || ''}">
+                `;
+                list.appendChild(row);
+            };
+
+            document.getElementById('submit-coverage-guard-form-btn').addEventListener('click', async () => {
+                const id = document.getElementById('coverage-guard-form-national-id').value.trim();
+                const name = document.getElementById('coverage-guard-form-name').value.trim();
+                const mobile_number = document.getElementById('coverage-guard-form-mobile').value.trim();
+                const password = document.getElementById('coverage-guard-form-password').value.trim();
+                const formId = document.getElementById('coverage-guard-form-id').value;
+
+                if (!id || !name || !password) return showAlert('رقم الهوية، الاسم، وكلمة المرور حقول إلزامية.');
+
+                const payload = { id, name, mobile_number, password };
+                showLoading(true);
+                let error, successMessage;
+
+                if (formId) {
+                    // Update logic here if needed in the future, for now it's add only
+                } else {
+                    ({ error } = await _supabase.from('coverage_guards').insert(payload));
+                    successMessage = "تمت إضافة حارس التغطية بنجاح!";
+                }
+                
+                showLoading(false);
+                if (error) {
+                    if (error.message.includes('duplicate key')) showAlert('فشل الإضافة. رقم الهوية هذا مسجل بالفعل.');
+                    else showAlert(`حدث خطأ: ${error.message}`);
+                } else {
                     closeModal();
                     showAlert(successMessage);
-                    loadHrDashboard('guards');
-                });
+                    loadHrDashboard('coverage_recruitment');
+                }
+            });
+
+            document.getElementById('submit-coverage-site-form-btn').addEventListener('click', async () => {
+                const project = document.getElementById('coverage-site-project').value.trim();
+                const location = document.getElementById('coverage-site-location').value.trim();
+                const coverage_date = document.getElementById('coverage-site-date').value;
+                const shift_day = document.getElementById('coverage-site-day').value;
+                const shift_start = document.getElementById('coverage-site-start-time').value;
+                const shift_end = document.getElementById('coverage-site-end-time').value;
+                const payout_amount = parseFloat(document.getElementById('coverage-site-payout').value);
+                const formId = document.getElementById('coverage-site-form-id').value;
                 
-                document.getElementById('submit-staff-form-btn').addEventListener('click', async () => {
-                     const staffId = document.getElementById('staff-form-id').value;
-                     const role = document.getElementById('staff-form-role').value;
-                     
-                     const assignments = [];
-                     document.querySelectorAll('.assignment-row').forEach(row => {
-                        const region = row.querySelector('[data-type="region"]').value;
-                        const location = row.querySelector('[data-type="location"]').value;
-                        const project = row.querySelector('[data-type="project"]').value;
-                        if(region || location || project) {
-                            assignments.push({ region: region || null, location: location || null, project: project || null });
-                        }
-                     });
+                if (!project || !location || !coverage_date || !shift_start || !shift_end || !payout_amount) {
+                    return showAlert('يرجى ملء جميع الحقول.');
+                }
+                
+                const shift_details = `${shift_day} (${shift_start} - ${shift_end})`;
 
-                     const staffData = { 
-                         name: document.getElementById('staff-form-name').value.trim(), 
-                         username: document.getElementById('staff-form-username').value.trim(), 
-                         role: role, 
-                         job_title: role === 'hr' ? document.getElementById('staff-form-title-input').value.trim() : null,
-                         assignments: (role === 'admin' || role === 'operations') ? assignments : null,
-                     };
-                     const password = document.getElementById('staff-form-password').value.trim();
-                     if (password) staffData.password = password;
+                const payload = { project, location, coverage_date, shift_day, shift_start, shift_end, shift_details, payout_amount, status: 'Available' };
 
-                     if (!staffData.name || !staffData.username) return showAlert('الاسم واسم المستخدم حقول إلزامية.');
-                     
-                     showLoading(true);
-                     let error, successMessage, logAction, logDetails;
-                     if (staffId) { // Update
-                         delete staffData.username; // Cannot update username
-                         ({ error } = await _supabase.from('staff').update(staffData).eq('id', staffId));
-                         successMessage = 'تم تحديث بيانات الموظف بنجاح!';
-                         logAction = 'قام بتحديث بيانات موظف';
-                         logDetails = `اسم الموظف: ${staffData.name}`;
-                     } else { // Insert
-                         if (!password) { showLoading(false); return showAlert('كلمة المرور إلزامية عند إضافة موظف جديد.'); }
-                         ({ error } = await _supabase.from('staff').insert(staffData));
-                         successMessage = 'تمت إضافة الموظف بنجاح!';
-                         logAction = `أضاف ${role === 'admin' ? 'مشرف' : 'موظف'} جديد`;
-                         logDetails = `الاسم: ${staffData.name}`;
-                     }
-                     showLoading(false);
-                     if (error) { if (error.message.includes('duplicate key')) showAlert('فشل الإضافة. اسم المستخدم هذا مسجل بالفعل.'); else showAlert(`حدث خطأ: ${error.message}`); return console.error(error); }
-                     await logActivity(state.currentUser.name, logAction, logDetails);
-                     closeModal();
-                     showAlert(successMessage);
-                     loadHrDashboard(role === 'hr' ? 'hr_staff' : (role === 'admin' ? 'supervisors' : 'operations'));
-                });
+                showLoading(true);
+                let error, successMessage;
 
-                 document.getElementById('submit-financial-transaction-btn').addEventListener('click', async () => {
-                    const guardId = document.getElementById('financial-transaction-guard-id').value;
-                    const type = document.getElementById('financial-transaction-type').value;
-                    const amount = parseFloat(document.getElementById('financial-transaction-amount').value);
-                    const reason = document.getElementById('financial-transaction-reason').value.trim();
+                if(formId) {
+                    // Update Logic
+                    ({error} = await _supabase.from('coverages').update(payload).eq('id', formId));
+                    successMessage = "تم تحديث التغطية بنجاح!";
+                } else {
+                    // Insert Logic
+                    ({error} = await _supabase.from('coverages').insert(payload));
+                    successMessage = "تم إنشاء التغطية بنجاح!";
+                }
 
-                    if (!guardId || !type || !amount || !reason) return showAlert('جميع الحقول إلزامية.');
-                    if (amount <= 0) return showAlert('يجب أن يكون المبلغ أكبر من صفر.');
-
-                    showLoading(true);
-                    const { error } = await _supabase.from('financial_transactions').insert({
-                        guard_id: guardId,
-                        type: type,
-                        amount: amount,
-                        reason: reason,
-                        created_by: state.currentUser.name
-                    });
-                    showLoading(false);
-
-                    if (error) {
-                        showAlert('فشل تسجيل العملية المالية.');
-                        console.error(error);
-                    } else {
-                        const actionText = type === 'deduction' ? 'خصم' : 'زيادة';
-                        await logActivity(state.currentUser.name, `أضاف ${actionText}`, `للحارس (ID: ${guardId}) بمبلغ ${amount} ريال. السبب: ${reason}`);
-                        closeModal();
-                        showAlert(`تمت إضافة ${actionText} بنجاح.`);
-                        loadHrDashboard('salaries');
-                    }
-                });
-            };
+                showLoading(false);
+                if (error) {
+                    showAlert(`حدث خطأ: ${error.message}`);
+                } else {
+                    closeModal();
+                    showAlert(successMessage);
+                    loadHrDashboard('coverage_sites');
+                }
+            });
             
             showLoading(true);
             setupEventListeners();
