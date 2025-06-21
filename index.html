@@ -42,13 +42,13 @@
             background-color: #1e293b;
         }
         .custom-tab {
-            @apply px-4 py-3 font-medium text-sm sm:text-base transition-colors duration-200 whitespace-nowrap cursor-pointer rounded-t-lg border-b-4 border-transparent;
+            @apply px-4 py-2 font-medium text-sm rounded-md transition-colors duration-200 cursor-pointer whitespace-nowrap;
         }
         .custom-tab.active-tab {
-             @apply bg-slate-700 text-white border-blue-500;
+             @apply bg-blue-600 text-white shadow-lg;
         }
         .custom-tab:not(.active-tab) {
-             @apply text-gray-400 hover:bg-slate-800/60 hover:text-gray-200;
+             @apply text-gray-300 hover:bg-slate-700/60 hover:text-white;
         }
         .action-btn {
             @apply text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-px flex items-center justify-center gap-1;
@@ -142,8 +142,8 @@
                   <h2 class="text-xl sm:text-2xl font-bold text-white">لوحة تحكم حراس التغطيات: <span id="coverage-guard-name-display"></span></h2>
                   <button class="logout-btn header-btn bg-red-600 hover:bg-red-700">تسجيل الخروج</button>
               </div>
-              <div class="border-b border-slate-700 bg-slate-900/50 px-2 sm:px-4">
-                <nav id="coverage-guard-tabs" class="flex space-x-2 overflow-x-auto pb-2" aria-label="Tabs">
+              <div class="border-b border-slate-700 p-2">
+                <nav id="coverage-guard-tabs" class="flex space-x-2 overflow-x-auto" aria-label="Tabs">
                     <a href="#" data-tab="available_coverages" class="custom-tab active-tab">التغطيات المتوفرة</a>
                     <a href="#" data-tab="my_coverages" class="custom-tab">تغطياتي</a>
                 </nav>
@@ -161,7 +161,7 @@
                       <!-- Buttons are added dynamically by JS -->
                   </div>
               </div>
-              <div class="border-b border-slate-700 bg-slate-900/50 px-2 sm:px-4"><nav id="admin-ops-tabs" class="flex space-x-2 overflow-x-auto pb-2" aria-label="Tabs"></nav></div>
+              <div class="border-b border-slate-700 p-2"><nav id="admin-ops-tabs" class="flex space-x-2 overflow-x-auto" aria-label="Tabs"></nav></div>
               <div id="admin-tab-content" class="p-4"></div>
         </div>
     </div>
@@ -176,7 +176,7 @@
                      <button class="logout-btn header-btn bg-red-600 hover:bg-red-700">تسجيل الخروج</button>
                  </div>
             </div>
-            <div class="border-b border-slate-700 bg-slate-900/50 px-2 sm:px-4"><nav id="hr-tabs" class="flex space-x-2 overflow-x-auto pb-2"></nav></div>
+            <div class="border-b border-slate-700 p-2"><nav id="hr-tabs" class="flex space-x-2 overflow-x-auto"></nav></div>
             <div id="hr-tab-content" class="p-4"></div>
         </div>
     </div>
@@ -438,7 +438,7 @@
             const { createClient } = supabase;
             const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-            let state = { currentGuard: null, currentUser: null, currentRole: null, allGuardsData: [], allStaffData: [], activeAttendanceId: null, allLeaveRequests: [] };
+            let state = { currentGuard: null, currentUser: null, currentRole: null, allGuardsData: [], allStaffData: [], allCoverageGuardsData: [], activeAttendanceId: null, allLeaveRequests: [] };
             const dom = {
                 pages: document.querySelectorAll('.page'), 
                 loading: document.getElementById('loading-overlay'), 
@@ -470,6 +470,19 @@
             const logActivity = async (actor, action, details = '') => { await _supabase.from('activity_log').insert({ actor, action, details }); };
             const formatDuration = (ms) => { if (ms < 0) ms = 0; const s = Math.floor(ms / 1000); const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`; };
             
+            const getGeolocation = () => {
+                return new Promise((resolve, reject) => {
+                    if (!navigator.geolocation) {
+                        reject(new Error('Geolocation is not supported by your browser.'));
+                        return;
+                    }
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => resolve(position.coords),
+                        (error) => reject(error)
+                    );
+                });
+            };
+
             const calculateEntitlement = (guard, workDurationMs) => {
                 if (!guard) return 0;
                 const totalSalary = (guard.basic_salary || 0) + (guard.housing_allowance || 0) + (guard.transport_allowance || 0) + (guard.other_allowances || 0);
@@ -492,6 +505,13 @@
                 const { data, error } = await _supabase.from('staff').select('*');
                 if (error) { console.error("Failed to fetch staff data:", error); showAlert("فشل تحميل بيانات الموظفين."); return []; }
                 state.allStaffData = data;
+                return data;
+            };
+
+            const fetchAllCoverageGuards = async () => {
+                const { data, error } = await _supabase.from('coverage_guards').select('*');
+                if (error) { console.error("Failed to fetch coverage guards data:", error); showAlert("فشل تحميل بيانات حراس التغطية."); return []; }
+                state.allCoverageGuardsData = data;
                 return data;
             };
 
@@ -683,17 +703,8 @@
                             const fullData = data.map(att => ({ ...att, guard: state.allGuardsData.find(g => g.id === att.guard_id) }));
                             columns = [
                                 { header: 'اسم الحارس', render: r => r.guard_name },
-                                { header: 'الموقع', render: r => r.guard?.location || '-' },
-                                { header: 'المشروع', render: r => r.guard?.project || '-' },
-                                { header: 'الوردية', render: r => {
-                                    if (!r.guard?.weekly_schedule) return 'لا يوجد جدول';
-                                    const today = new Date(r.created_at).toLocaleString('en-US', {weekday: 'long'}).toLowerCase();
-                                    const shift = r.guard.weekly_schedule[today];
-                                    if (!shift || !shift.start) return 'راحة';
-                                    const formatTime = (time) => new Date(`1970-01-01T${time}`).toLocaleTimeString('ar-SA', {hour: '2-digit', minute:'2-digit', hour12: true});
-                                    return `${formatTime(shift.start)} - ${formatTime(shift.end)}`;
-                                }},
                                 { header: 'وقت الحضور', render: r => new Date(r.created_at).toLocaleString('ar-SA') },
+                                { header: 'لوكيشن الحضور', render: r => r.checkin_lat ? `<button class="action-btn bg-blue-500 view-map-btn" data-lat="${r.checkin_lat}" data-lon="${r.checkin_lon}"><i class="ph ph-map-pin"></i> عرض الخريطة</button>` : 'لم يسجل' },
                                 { header: 'الحالة', render: r => {
                                     if (!r.checkout_at) {
                                         return `<div class="flex items-center gap-2"><span class="on-duty-status">في موقع العمل</span> 
@@ -704,6 +715,7 @@
                                     }
                                     return `<span>تم الانصراف (${r.work_duration})</span>`;
                                 }},
+                                { header: 'لوكيشن الانصراف', render: r => r.checkout_lat ? `<button class="action-btn bg-blue-500 view-map-btn" data-lat="${r.checkout_lat}" data-lon="${r.checkout_lon}"><i class="ph ph-map-pin"></i> عرض الخريطة</button>` : 'لم يسجل' },
                                 { header: 'الإجراء', render: r => {
                                       const statusMap = { Approved: 'معتمد', Cancelled: 'ملغي' };
                                       if(statusMap[r.status]) {
@@ -798,6 +810,7 @@
                 await fetchAllGuards();
                 await fetchAllLeaveRequests();
                 await fetchAllStaff();
+                await fetchAllCoverageGuards();
 
                 const tableId = `hr-table-${tab}`;
                 const hasAddButton = ['guards', 'hr_staff', 'supervisors', 'operations', 'coverage_recruitment', 'coverage_sites'].includes(tab);
@@ -863,20 +876,17 @@
                         });
                         break;
                     case 'coverage_recruitment':
-                        const { data: covGuards, error: covGuardsErr } = await _supabase.from('coverage_guards').select('*');
-                        if (covGuardsErr) showAlert('فشل تحميل بيانات حراس التغطية.');
-                        else {
-                            columns = [
-                                { header: 'الاسم', render: r => r.name },
-                                { header: 'رقم الهوية', render: r => r.id },
-                                { header: 'رقم الجوال', render: r => r.mobile_number || '-' },
-                                { header: 'الإجراءات', render: r => `<div class="flex gap-2">
-                                      <button class="action-btn bg-yellow-500 hover:bg-yellow-600 edit-coverage-guard-btn" data-guard-id="${r.id}"><i class="ph ph-pencil-simple"></i> تعديل</button>
-                                      <button class="action-btn bg-red-600 hover:bg-red-700 delete-coverage-guard-btn" data-guard-id="${r.id}" data-guard-name="${r.name}"><i class="ph ph-trash"></i> حذف</button>
-                                      </div>` }
-                            ];
-                            renderTable(tableContainer, columns, covGuards);
-                        }
+                        data = state.allCoverageGuardsData;
+                        columns = [
+                            { header: 'الاسم', render: r => r.name },
+                            { header: 'رقم الهوية', render: r => r.id },
+                            { header: 'رقم الجوال', render: r => r.mobile_number || '-' },
+                            { header: 'الإجراءات', render: r => `<div class="flex gap-2">
+                                  <button class="action-btn bg-yellow-500 hover:bg-yellow-600 edit-coverage-guard-btn" data-guard-id="${r.id}"><i class="ph ph-pencil-simple"></i> تعديل</button>
+                                  <button class="action-btn bg-red-600 hover:bg-red-700 delete-coverage-guard-btn" data-guard-id="${r.id}" data-guard-name="${r.name}"><i class="ph ph-trash"></i> حذف</button>
+                                  </div>` }
+                        ];
+                        renderTable(tableContainer, columns, data);
                         break;
                     case 'coverage_sites':
                         const { data: covSites, error: covSitesErr } = await _supabase.from('coverages').select('*').order('coverage_date', { ascending: false });
@@ -1162,8 +1172,23 @@
                 
                 document.getElementById('submit-attendance-btn').addEventListener('click', async () => {
                     showLoading(true); 
+                    let coords = {};
                     try {
-                        const { data, error } = await _supabase.from('attendance').insert({ guard_id: state.currentGuard.id, guard_name: state.currentGuard.name, notes: document.getElementById('guard-notes').value.trim(), status: 'Pending'}).select().single();
+                        const position = await getGeolocation();
+                        coords = { checkin_lat: position.latitude, checkin_lon: position.longitude };
+                    } catch (geoError) {
+                        showAlert('لم نتمكن من تحديد موقعك. سيتم تسجيل الحضور بدون موقع.');
+                    }
+
+                    try {
+                        const payload = { 
+                            guard_id: state.currentGuard.id, 
+                            guard_name: state.currentGuard.name, 
+                            notes: document.getElementById('guard-notes').value.trim(), 
+                            status: 'Pending',
+                            ...coords 
+                        };
+                        const { data, error } = await _supabase.from('attendance').insert(payload).select().single();
                         closeModal();
                         if (error) throw error;
                         await logActivity(`الحارس: ${state.currentGuard.name}`, 'قام بتسجيل الحضور', `رقم السجل: ${data?.id}`);
@@ -1181,6 +1206,13 @@
                         if (dom.checkOutBtn.disabled || !state.activeAttendanceId) return; 
                         if (!await confirmAction('تأكيد الانصراف', 'هل أنت متأكد من رغبتك في الانصراف الآن؟')) return; 
                         showLoading(true);
+                        let coords = {};
+                        try {
+                            const position = await getGeolocation();
+                            coords = { checkout_lat: position.latitude, checkout_lon: position.longitude };
+                        } catch (geoError) {
+                            showAlert('لم نتمكن من تحديد موقعك. سيتم تسجيل الانصراف بدون موقع.');
+                        }
                         try {
                             await fetchAllGuards();
                             const checkoutTime = new Date();
@@ -1190,7 +1222,15 @@
                             const durationString = formatDuration(workDurationMs);
                             const currentGuardData = state.allGuardsData.find(g => g.id === state.currentGuard.id);
                             const entitlement = calculateEntitlement(currentGuardData, workDurationMs);
-                            const { error } = await _supabase.from('attendance').update({ checkout_at: checkoutTime.toISOString(), work_duration: durationString, daily_entitlement: entitlement }).eq('id', state.activeAttendanceId);
+                            
+                            const updatePayload = { 
+                                checkout_at: checkoutTime.toISOString(), 
+                                work_duration: durationString, 
+                                daily_entitlement: entitlement,
+                                ...coords
+                            };
+
+                            const { error } = await _supabase.from('attendance').update(updatePayload).eq('id', state.activeAttendanceId);
                             if(error) throw error;
                             await logActivity(`الحارس: ${state.currentGuard.name}`, 'قام بالانصراف', `مدة العمل: ${durationString}`);
                             showAlert("تم تسجيل انصرافك بنجاح."); await updateGuardButtonState(state.currentGuard.id);
@@ -1383,6 +1423,15 @@
                         const button = e.target.closest('button.action-btn');
                         if (!button) return;
 
+                        if (button.classList.contains('view-map-btn')) {
+                            const lat = button.dataset.lat;
+                            const lon = button.dataset.lon;
+                            if (lat && lon) {
+                                window.open(`https://www.google.com/maps?q=${lat},${lon}`, '_blank');
+                            }
+                            return;
+                        }
+
                         const id = button.dataset.id;
                         const currentTab = document.querySelector('#admin-ops-tabs .active-tab').dataset.tab;
                         const role = state.currentRole;
@@ -1526,7 +1575,56 @@
                         const button = e.target.closest('button');
                         if (!button) return;
 
-                        if (button.id === 'add-coverage-guard-btn') {
+                        const currentTab = dom.hrTabs.querySelector('.active-tab').dataset.tab;
+
+                        if (button.classList.contains('hr-action-btn')) {
+                            const id = button.dataset.id;
+                            const tableName = button.dataset.table;
+                            const action = button.dataset.action; // 'Approved' or 'Rejected'
+                            const actionText = action === 'Approved' ? 'الموافقة' : 'الرفض';
+                            if (!await confirmAction(`تأكيد ${actionText}`, `هل أنت متأكد من ${actionText} على هذا الطلب؟`)) return;
+                            showLoading(true);
+                            const { error } = await _supabase.from(tableName).update({ status: action, processed_by: 'HR' }).eq('id', id);
+                            showLoading(false);
+                            if (error) {
+                                showAlert(`فشلت عملية ${actionText}: ${error.message}`);
+                            } else {
+                                showAlert(`تمت عملية ${actionText} بنجاح.`);
+                                await logActivity('HR', `${actionText} طلب`, `Table: ${tableName}, ID: ${id}`);
+                                loadHrDashboard(currentTab);
+                            }
+                        }
+                        else if (button.classList.contains('delete-record-btn')) {
+                             const id = button.dataset.id;
+                             const tableName = button.dataset.table;
+                             if (!await confirmAction('تأكيد الحذف', 'هل أنت متأكد من حذف هذا السجل بشكل نهائي؟')) return;
+                             showLoading(true);
+                             const { error } = await _supabase.from(tableName).delete().eq('id', id);
+                             showLoading(false);
+                             if (error) {
+                                 showAlert(`فشل الحذف: ${error.message}`);
+                             } else {
+                                 showAlert('تم حذف السجل بنجاح.');
+                                 await logActivity('HR', 'حذف سجل', `Table: ${tableName}, ID: ${id}`);
+                                 loadHrDashboard(currentTab);
+                             }
+                        }
+                        else if (button.classList.contains('cancel-leave-btn')) {
+                             const id = button.dataset.id;
+                             const tableName = button.dataset.table;
+                             if (!await confirmAction('تأكيد قطع الإجازة', 'هل أنت متأكد من قطع هذه الإجازة المعتمدة؟')) return;
+                             showLoading(true);
+                             const { error } = await _supabase.from(tableName).update({ status: 'Cancelled by HR', processed_by: 'HR' }).eq('id', id);
+                              showLoading(false);
+                             if (error) {
+                                 showAlert(`فشل قطع الإجازة: ${error.message}`);
+                             } else {
+                                 showAlert('تم قطع الإجازة بنجاح.');
+                                 await logActivity('HR', 'قطع إجازة', `Table: ${tableName}, ID: ${id}`);
+                                 loadHrDashboard(currentTab);
+                             }
+                        }
+                        else if (button.id === 'add-coverage-guard-btn') {
                             document.getElementById('coverage-guard-form-title').textContent = 'إضافة حارس تغطية جديد';
                             document.getElementById('coverage-guard-form-id').value = '';
                             document.getElementById('coverage-guard-form-national-id').value = '';
@@ -1536,8 +1634,7 @@
                             document.getElementById('coverage-guard-form-national-id').disabled = false;
                             showModal('coverage-guard-form-modal');
                         }
-
-                        if (button.id === 'add-coverage-site-btn') {
+                        else if (button.id === 'add-coverage-site-btn') {
                              document.getElementById('coverage-site-form-title').textContent = 'إنشاء تغطية جديدة';
                              document.getElementById('coverage-site-form-id').value = '';
                              document.getElementById('coverage-site-project').value = '';
@@ -1550,7 +1647,7 @@
                              showModal('coverage-site-form-modal');
                         }
                         // Handle coverage application actions
-                        if(button.classList.contains('accept-coverage-app-btn')) {
+                        else if(button.classList.contains('accept-coverage-app-btn')) {
                             const appId = button.dataset.appId;
                             const coverageId = button.dataset.coverageId;
                             const guardId = button.dataset.guardId;
@@ -1583,6 +1680,157 @@
                             showLoading(false);
                             loadHrDashboard('coverage_applicants');
                         }
+                        else if (button.classList.contains('edit-guard-btn')) {
+                            const guardId = button.dataset.guardId;
+                            const guardData = state.allGuardsData.find(g => g.id.toString() === guardId);
+                            if (!guardData) return showAlert('لم يتم العثور على بيانات الحارس.');
+
+                            document.getElementById('guard-form-title-text').textContent = `تعديل بيانات: ${guardData.name}`;
+                            document.getElementById('guard-form-id').value = guardData.id;
+                            document.getElementById('guard-form-national-id').value = guardData.id;
+                            document.getElementById('guard-form-national-id').disabled = true; // Prevent editing PK
+                            document.getElementById('guard-form-name').value = guardData.name || '';
+                            document.getElementById('guard-form-mobile').value = guardData.mobile_number || '';
+                            document.getElementById('guard-form-password').value = '';
+                            document.getElementById('guard-form-password').placeholder = 'اتركه فارغاً لعدم التغيير';
+                            document.getElementById('guard-form-job-title').value = guardData.job_title || '';
+                            document.getElementById('guard-form-location').value = guardData.location || '';
+                            document.getElementById('guard-form-region').value = guardData.region || '';
+                            document.getElementById('guard-form-project').value = guardData.project || '';
+                            document.getElementById('guard-form-status').value = guardData.status || 'اساسي';
+                            document.getElementById('guard-form-basic-salary').value = guardData.basic_salary || '';
+                            document.getElementById('guard-form-housing-allowance').value = guardData.housing_allowance || '';
+                            document.getElementById('guard-form-transport-allowance').value = guardData.transport_allowance || '';
+                            document.getElementById('guard-form-other-allowances').value = guardData.other_allowances || '';
+                            
+                            const scheduleContainer = document.getElementById('guard-form-schedule-container');
+                            const days = { sunday: 'الأحد', monday: 'الإثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس', friday: 'الجمعة', saturday: 'السبت' };
+                            scheduleContainer.innerHTML = Object.entries(days).map(([dayKey, dayName]) => {
+                                const shift = guardData.weekly_schedule ? guardData.weekly_schedule[dayKey] : null;
+                                return `
+                                <div class="grid grid-cols-5 gap-2 items-center">
+                                    <label class="col-span-1 text-gray-300">${dayName}</label>
+                                    <label class="text-xs text-center">من</label>
+                                    <input type="time" data-day="${dayKey}" data-type="start" class="col-span-1 p-1 bg-slate-700 border border-slate-600 rounded-md" value="${shift?.start || ''}">
+                                    <label class="text-xs text-center">إلى</label>
+                                    <input type="time" data-day="${dayKey}" data-type="end" class="col-span-1 p-1 bg-slate-700 border border-slate-600 rounded-md" value="${shift?.end || ''}">
+                                </div>`
+                            }).join('');
+                            
+                            showModal('guard-form-modal');
+                        }
+                        else if (button.classList.contains('view-schedule-btn')) {
+                             const guardId = button.dataset.guardId;
+                             const guardData = state.allGuardsData.find(g => g.id.toString() === guardId);
+                             if (!guardData) return showAlert('لم يتم العثور على بيانات الحارس.');
+                             
+                             dom.scheduleModal.title.textContent = `جدول دوام: ${guardData.name}`;
+                             const scheduleBody = dom.scheduleModal.body;
+                             const schedule = guardData.weekly_schedule;
+                             if (schedule && Object.keys(schedule).length > 0) {
+                                const days = { saturday: 'السبت', sunday: 'الأحد', monday: 'الإثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس', friday: 'الجمعة' };
+                                scheduleBody.innerHTML = `<ul class="space-y-2">` + Object.entries(days).map(([dayKey, dayName]) => {
+                                    const shift = schedule[dayKey];
+                                    const shiftText = (shift && shift.start && shift.end) 
+                                        ? `من ${new Date(`1970-01-01T${shift.start}`).toLocaleTimeString('ar-SA', {hour: '2-digit', minute:'2-digit'})} إلى ${new Date(`1970-01-01T${shift.end}`).toLocaleTimeString('ar-SA', {hour: '2-digit', minute:'2-digit'})}` 
+                                        : 'راحة';
+                                    return `<li class="flex justify-between"><strong>${dayName}:</strong> <span>${shiftText}</span></li>`;
+                                }).join('') + `</ul>`;
+                             } else {
+                                scheduleBody.innerHTML = '<p class="text-center text-gray-400">لا يوجد جدول مسجل لهذا الحارس.</p>';
+                             }
+                             showModal('schedule-display-modal');
+                        }
+                        else if (button.classList.contains('delete-guard-btn')) {
+                             const guardId = button.dataset.guardId;
+                             const guardName = button.dataset.guardName;
+                             if (!await confirmAction('تأكيد الحذف', `هل أنت متأكد من حذف الحارس ${guardName}؟ سيتم حذف جميع سجلاته.`)) return;
+                             showLoading(true);
+                             const { error } = await _supabase.from('guards').delete().eq('id', guardId);
+                             showLoading(false);
+                             if (error) {
+                                 showAlert(`فشل الحذف: ${error.message}`);
+                             } else {
+                                 showAlert('تم حذف الحارس بنجاح.');
+                                 await logActivity('HR', 'حذف حارس', `Guard ID: ${guardId}, Name: ${guardName}`);
+                                 loadHrDashboard('guards');
+                             }
+                        }
+                        else if (button.classList.contains('edit-staff-btn')) {
+                            const staffId = button.dataset.staffId;
+                            const staffData = state.allStaffData.find(s => s.id.toString() === staffId);
+                            if (!staffData) return showAlert('لم يتم العثور على بيانات الموظف.');
+                            
+                            const role = staffData.role;
+                            const roleNames = { 'hr': 'موظف موارد بشرية', 'admin': 'مشرف', 'operations': 'موظف عمليات'};
+                            document.getElementById('staff-form-title').textContent = `تعديل ${roleNames[role]}`;
+                            document.getElementById('staff-form-id').value = staffData.id;
+                            document.getElementById('staff-form-role').value = role;
+                            document.getElementById('staff-form-name').value = staffData.name || '';
+                            document.getElementById('staff-form-username').value = staffData.username || '';
+                            document.getElementById('staff-form-username').disabled = true; // Don't allow changing username
+                            document.getElementById('staff-form-password').value = '';
+                            document.getElementById('staff-form-password').placeholder = 'اتركه فارغاً لعدم التغيير';
+                            document.getElementById('staff-form-title-input').value = staffData.job_title || '';
+
+                            document.getElementById('staff-form-title-container').style.display = role === 'hr' ? 'block' : 'none';
+                            const assignmentContainer = document.getElementById('staff-form-assignment-container');
+                            assignmentContainer.style.display = (role === 'admin' || role === 'operations') ? 'block' : 'none';
+                            const assignmentsList = document.getElementById('staff-form-assignments-list');
+                            assignmentsList.innerHTML = '';
+                            if (staffData.assignments && staffData.assignments.length > 0) {
+                                staffData.assignments.forEach(addAssignmentRow);
+                            } else {
+                                addAssignmentRow();
+                            }
+
+                            showModal('staff-form-modal');
+                        }
+                        else if (button.classList.contains('delete-staff-btn')) {
+                            const staffId = button.dataset.staffId;
+                            const staffName = button.dataset.staffName;
+                            if (!await confirmAction('تأكيد الحذف', `هل أنت متأكد من حذف الموظف ${staffName}؟`)) return;
+                            showLoading(true);
+                            const { error } = await _supabase.from('staff').delete().eq('id', staffId);
+                            showLoading(false);
+                            if (error) {
+                                showAlert(`فشل الحذف: ${error.message}`);
+                            } else {
+                                showAlert('تم حذف الموظف بنجاح.');
+                                await logActivity('HR', 'حذف موظف', `Staff ID: ${staffId}, Name: ${staffName}`);
+                                loadHrDashboard(currentTab);
+                            }
+                        }
+                        else if (button.classList.contains('edit-coverage-guard-btn')) {
+                            const guardId = button.dataset.guardId;
+                            const guardData = state.allCoverageGuardsData.find(g => g.id.toString() === guardId);
+                            if (!guardData) return showAlert('لم يتم العثور على بيانات حارس التغطية.');
+
+                            document.getElementById('coverage-guard-form-title').textContent = `تعديل بيانات: ${guardData.name}`;
+                            document.getElementById('coverage-guard-form-id').value = guardData.id;
+                            document.getElementById('coverage-guard-form-national-id').value = guardData.id;
+                            document.getElementById('coverage-guard-form-national-id').disabled = true;
+                            document.getElementById('coverage-guard-form-name').value = guardData.name || '';
+                            document.getElementById('coverage-guard-form-mobile').value = guardData.mobile_number || '';
+                            document.getElementById('coverage-guard-form-password').value = '';
+                            document.getElementById('coverage-guard-form-password').placeholder = 'اتركه فارغاً لعدم التغيير';
+                            showModal('coverage-guard-form-modal');
+                        }
+                        else if (button.classList.contains('delete-coverage-guard-btn')) {
+                            const guardId = button.dataset.guardId;
+                            const guardName = button.dataset.guardName;
+                            if (!await confirmAction('تأكيد الحذف', `هل أنت متأكد من حذف حارس التغطية ${guardName}؟`)) return;
+                            showLoading(true);
+                            const { error } = await _supabase.from('coverage_guards').delete().eq('id', guardId);
+                            showLoading(false);
+                            if (error) {
+                                showAlert(`فشل الحذف: ${error.message}`);
+                            } else {
+                                showAlert('تم حذف حارس التغطية بنجاح.');
+                                await logActivity('HR', 'حذف حارس تغطية', `Guard ID: ${guardId}, Name: ${guardName}`);
+                                loadHrDashboard('coverage_recruitment');
+                            }
+                        }
                     });
                 }
                  // *** NEW: Added button listeners ***
@@ -1604,23 +1852,33 @@
             };
 
             document.getElementById('submit-coverage-guard-form-btn').addEventListener('click', async () => {
-                const id = document.getElementById('coverage-guard-form-national-id').value.trim();
+                const formId = document.getElementById('coverage-guard-form-id').value;
                 const name = document.getElementById('coverage-guard-form-name').value.trim();
                 const mobile_number = document.getElementById('coverage-guard-form-mobile').value.trim();
                 const password = document.getElementById('coverage-guard-form-password').value.trim();
-                const formId = document.getElementById('coverage-guard-form-id').value;
-
-                if (!id || !name || !password) return showAlert('رقم الهوية، الاسم، وكلمة المرور حقول إلزامية.');
-
-                const payload = { id, name, mobile_number, password };
+                
+                const payload = { name, mobile_number };
+                if (password) {
+                    payload.password = password;
+                }
+            
                 showLoading(true);
-                let error, successMessage;
-
-                if (formId) {
-                    // Update logic here if needed in the future, for now it's add only
-                } else {
+                let error;
+            
+                if (formId) { // Update
+                    if (!name) {
+                        showLoading(false);
+                        return showAlert('الاسم حقل إلزامي.');
+                    }
+                    ({ error } = await _supabase.from('coverage_guards').update(payload).eq('id', formId));
+                } else { // Insert
+                    const id = document.getElementById('coverage-guard-form-national-id').value.trim();
+                    if (!id || !name || !password) {
+                        showLoading(false);
+                        return showAlert('رقم الهوية، الاسم، وكلمة المرور حقول إلزامية.');
+                    }
+                    payload.id = id;
                     ({ error } = await _supabase.from('coverage_guards').insert(payload));
-                    successMessage = "تمت إضافة حارس التغطية بنجاح!";
                 }
                 
                 showLoading(false);
@@ -1629,10 +1887,60 @@
                     else showAlert(`حدث خطأ: ${error.message}`);
                 } else {
                     closeModal();
-                    showAlert(successMessage);
+                    showAlert(formId ? 'تم تحديث البيانات بنجاح.' : 'تمت إضافة حارس التغطية بنجاح.');
                     loadHrDashboard('coverage_recruitment');
                 }
             });
+
+            document.getElementById('submit-staff-form-btn').addEventListener('click', async () => {
+                const formId = document.getElementById('staff-form-id').value;
+                const role = document.getElementById('staff-form-role').value;
+                const assignments = Array.from(document.querySelectorAll('#staff-form-assignments-list .assignment-row')).map(row => ({
+                    region: row.querySelector('[data-type="region"]').value.trim(),
+                    location: row.querySelector('[data-type="location"]').value.trim(),
+                    project: row.querySelector('[data-type="project"]').value.trim(),
+                })).filter(a => a.region || a.location || a.project);
+            
+                const payload = {
+                    name: document.getElementById('staff-form-name').value.trim(),
+                    username: document.getElementById('staff-form-username').value.trim(),
+                    job_title: document.getElementById('staff-form-title-input').value.trim() || null,
+                    role: role,
+                    assignments: assignments.length > 0 ? assignments : null,
+                };
+                const password = document.getElementById('staff-form-password').value;
+                if(password) {
+                    payload.password = password;
+                }
+            
+                if (!payload.name || !payload.username) {
+                    return showAlert('الاسم واسم المستخدم حقول إلزامية.');
+                }
+            
+                showLoading(true);
+                let error;
+            
+                if (formId) { // Update
+                    ({error} = await _supabase.from('staff').update(payload).eq('id', formId));
+                } else { // Insert
+                    if (!password) {
+                        showLoading(false);
+                        return showAlert('كلمة المرور مطلوبة للموظف الجديد.');
+                    }
+                    ({error} = await _supabase.from('staff').insert(payload));
+                }
+            
+                showLoading(false);
+                if (error) {
+                    showAlert(`فشلت العملية: ${error.message}`);
+                } else {
+                    showAlert(formId ? 'تم تحديث بيانات الموظف بنجاح.' : 'تمت إضافة الموظف بنجاح.');
+                    closeModal();
+                    const roleToTabMap = { 'hr': 'hr_staff', 'admin': 'supervisors', 'operations': 'operations'};
+                    loadHrDashboard(roleToTabMap[role]);
+                }
+            });
+
 
             document.getElementById('submit-coverage-site-form-btn').addEventListener('click', async () => {
                 const project = document.getElementById('coverage-site-project').value.trim();
@@ -1672,6 +1980,62 @@
                     closeModal();
                     showAlert(successMessage);
                     loadHrDashboard('coverage_sites');
+                }
+            });
+
+            document.getElementById('submit-guard-form-btn').addEventListener('click', async () => {
+                const formId = document.getElementById('guard-form-id').value;
+                const weekly_schedule = {};
+                document.querySelectorAll('#guard-form-schedule-container .grid').forEach(row => {
+                    const day = row.querySelector('input[type="time"]').dataset.day;
+                    const start = row.querySelector('input[data-type="start"]').value;
+                    const end = row.querySelector('input[data-type="end"]').value;
+                    if(start && end) {
+                        weekly_schedule[day] = { start, end };
+                    }
+                });
+
+                const payload = {
+                    name: document.getElementById('guard-form-name').value.trim(),
+                    mobile_number: document.getElementById('guard-form-mobile').value.trim(),
+                    job_title: document.getElementById('guard-form-job-title').value.trim(),
+                    location: document.getElementById('guard-form-location').value.trim(),
+                    region: document.getElementById('guard-form-region').value.trim(),
+                    project: document.getElementById('guard-form-project').value.trim(),
+                    status: document.getElementById('guard-form-status').value,
+                    basic_salary: parseFloat(document.getElementById('guard-form-basic-salary').value) || 0,
+                    housing_allowance: parseFloat(document.getElementById('guard-form-housing-allowance').value) || 0,
+                    transport_allowance: parseFloat(document.getElementById('guard-form-transport-allowance').value) || 0,
+                    other_allowances: parseFloat(document.getElementById('guard-form-other-allowances').value) || 0,
+                    weekly_schedule
+                };
+                
+                const password = document.getElementById('guard-form-password').value;
+                if(password) {
+                    payload.password = password;
+                }
+
+                showLoading(true);
+                let error;
+
+                if(formId) { // Update existing guard
+                    ({error} = await _supabase.from('guards').update(payload).eq('id', formId));
+                } else { // Insert new guard
+                    payload.id = document.getElementById('guard-form-national-id').value.trim();
+                    if(!payload.id || !payload.password) {
+                        showLoading(false);
+                        return showAlert('رقم الهوية وكلمة المرور مطلوبان للحارس الجديد.');
+                    }
+                    ({error} = await _supabase.from('guards').insert(payload));
+                }
+                
+                showLoading(false);
+                if (error) {
+                    showAlert(`فشلت العملية: ${error.message}`);
+                } else {
+                    showAlert(formId ? 'تم تحديث بيانات الحارس بنجاح.' : 'تمت إضافة الحارس بنجاح.');
+                    closeModal();
+                    loadHrDashboard('guards');
                 }
             });
             
