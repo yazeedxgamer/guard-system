@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام اركانات</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="login-page">
+    <div class="login-card">
+        <img src="https://arkanat.com.sa/wp-content/uploads/2024/07/logo.svg" alt="شعار اركانات" class="logo">
+        <h3>تسجيل الدخول للنظام</h3>
+        <form id="login-form">
+            <div class="form-group">
+                <label for="id-number">رقم الهوية</label>
+                <input type="text" id="id-number" required>
+            </div>
+            <div class="form-group">
+                <label for="password">كلمة المرور</label>
+                <input type="password" id="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">تسجيل الدخول</button>
+        </form>
+    </div>
+</div>
+    <div class="dashboard-container hidden">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="https://arkanat.com.sa/wp-content/uploads/2024/07/logo.svg" alt="شعار اركانات" class="logo">
+                <h1>اركانات</h1>
+            </div>
+            <nav class="sidebar-nav">
+    <ul>
+        <li data-role="مشرف,ادارة العمليات"><a href="#" data-page="page-permission-requests"><i class="ph-fill ph-user-switch"></i><span>طلبات الاستئذان</span></a></li>
+        <li data-role="ادارة العمليات"><a href="#" data-page="page-ops-review-requests"><i class="ph-fill ph-clipboard-text"></i><span>طلبات الموظفين</span></a></li>
+        <li data-role="مدير النظام,ادارة الموارد البشرية" style="display:none;"><a href="#statistics" data-page="page-jobs"><i class="ph-fill ph-briefcase"></i><span>الوظائف</span></a></li>
+        <li data-role="مدير النظام,ادارة العمليات,مشرف"><a href="#statistics" data-page="page-geo"><i class="ph-fill ph-map-pin"></i><span>التتبع الجغرافي</span></a></li>
+        <li data-role="ادارة العمليات"><a href="#" data-page="page-coverage"><i class="ph-fill ph-shield-check"></i><span>التغطيات</span></a></li>
+        <li data-role="ادارة العمليات"><a href="#" data-page="page-directives-ops"><i class="ph-fill ph-paper-plane-tilt"></i><span>التوجيهات</span></a></li>
+        <li data-role="مدير النظام,ادارة العمليات,مشرف"><a href="#statistics" data-page="page-visits"><i class="ph-fill ph-car"></i><span>الزيارات</span></a></li>
+        <li data-role="ادارة العمليات,مشرف"><a href="#" data-page="page-guard-attendance"><i class="ph-fill ph-users-four"></i><span>حضور الحراس</span></a></li>
+        <li data-role="مشرف"><a href="#" data-page="page-patrol"><i class="ph-fill ph-car-profile"></i><span>تسجيل الجولة</span></a></li>
+        <li data-role="مشرف"><a href="#" data-page="page-supervisor-schedules"><i class="ph-fill ph-calendar-check"></i><span>جداول الحراس</span></a></li>
+        <li data-role="مشرف"><a href="#" data-page="page-supervisor-permission-requests"><i class="ph-fill ph-user-switch"></i><span>طلبات استئذان الحراس</span></a></li>
+        <li data-role="ادارة العقود"><a href="#" data-page="page-contracts"><i class="ph-fill ph-handshake"></i><span>إدارة العقود</span></a></li>
+        <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-vacancies"><i class="ph-fill ph-briefcase"></i><span>إدارة الشواغر</span></a></li>
+        <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-employees"><i class="ph-fill ph-user-list"></i><span>إدارة الموظفين</span></a></li>
+        <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-payroll"><i class="ph-fill ph-file-text"></i><span>مسير الرواتب</span></a></li>
+        <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-operations-requests"><i class="ph-fill ph-user-plus"></i><span>طلبات العمليات</span></a></li>
+        <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-coverage-requests"><i class="ph-fill ph-shield-plus"></i><span>طلبات التغطية</span></a></li>
+        <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-leave-requests"><i class="ph-fill ph-calendar-blank"></i><span>طلبات الإجازات</span></a></li>
+        <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-resignation-requests"><i class="ph-fill ph-file-x"></i><span>طلبات الاستقالات</span></a></li>
+        <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-loan-requests"><i class="ph-fill ph-hand-coins"></i><span>طلبات السلف</span></a></li>
+        <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-hr-attendance-log"><i class="ph-fill ph-user-list-checks"></i><span>سجل الحضور</span></a></li>
+        <li data-role="ادارة العمليات"><a href="#" data-page="page-hiring"><i class="ph-fill ph-user-plus"></i><span>التوظيف</span></a></li>
+        <li data-role="حارس أمن"><a href="#statistics" data-page="page-attendance"><i class="ph-fill ph-timer"></i><span>الحضور و الانصراف</span></a></li>
+        <li data-role="حارس أمن"><a href="#statistics" data-page="page-my-requests"><i class="ph-fill ph-files"></i><span>طلباتي</span></a></li>
+        <li data-role="مشرف,حارس أمن"><a href="#" data-page="page-my-directives"><i class="ph-fill ph-bell-ringing"></i><span>التوجيهات الواردة</span></a></li>
+        <li data-role="حارس أمن"><a href="#" data-page="page-my-schedule"><i class="ph-fill ph-calendar"></i><span>جدولي</span></a></li>
+        <li data-role="مشرف"><a href="#" data-page="page-my-visits"><i class="ph-fill ph-car"></i><span>الزيارات الميدانية</span></a></li>
+    </ul>
+</nav>
+            <div class="sidebar-footer">
+                <a href="#statistics" id="logout-btn" class="btn btn-logout"><i class="ph-fill ph-sign-out"></i><span>تسجيل الخروج</span></a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="main-header">
+                <h2 id="main-title">الاحصائيات</h2>
+                <div class="user-profile">
+                    <span>مرحباً، يزيد الصايل</span>
+                    <i class="ph-fill ph-user-circle"></i>
+                </div>
+            </header>
+            
+            <div class="content-area">
+                <div id="page-statistics" class="page-content">
+                    <div class="row">
+                        <div class="col-xl-3 col-lg-6 col-md-6 col-sm-6 col-12">
+    <div id="stats-clients" class="card-statistic">
+        <div class="icon-stat" style="background-color: #007bff40; color: #007bff;"><i class="ph-bold ph-users"></i></div>
+        <div><h3>0</h3><p>عدد العملاء</p></div>
+    </div>
+</div>
+<div class="col-xl-3 col-lg-6 col-md-6 col-sm-6 col-12">
+   <div id="stats-users" class="card-statistic">
+        <div class="icon-stat" style="background-color: #28a74540; color: #28a745;"><i class="ph-bold ph-user-list"></i></div>
+        <div><h3>0</h3><p>عدد المستخدمين</p></div>
+    </div>
+</div>
+<div class="col-xl-3 col-lg-6 col-md-6 col-sm-6 col-12">
+    <div id="stats-visits" class="card-statistic">
+        <div class="icon-stat" style="background-color: #ffc10740; color: #ffc107;"><i class="ph-bold ph-car"></i></div>
+        <div><h3>0</h3><p>عدد الزيارات</p></div>
+    </div>
+    
+</div>
+<div class="col-xl-3 col-lg-6 col-md-6 col-sm-6 col-12">
+     <div id="stats-schedules" class="card-statistic">
+        <div class="icon-stat" style="background-color: #dc354540; color: #dc3545;"><i class="ph-bold ph-calendar-check"></i></div>
+        <div><h3>0</h3><p>عدد المناوبات</p></div>
+    </div>
+</div>
+                    </div>
+                    </div>
+
+                
+                
+                <div id="page-jobs" class="page-content hidden"><p>محتوى صفحة الوظائف هنا.</p></div>
+                <div id="page-geo" class="page-content hidden" style="padding: 0;"><div id="map"></div></div>
+                <div id="page-schedules" class="page-content hidden"><p>محتوى صفحة الجداول والمناوبات هنا.</p></div>
+                <div id="page-coverage" class="page-content hidden">
+    <div class="page-header">
+        <h3>ورديات التغطية المتاحة</h3>
+    </div>
+    <div id="coverage-list-container" class="contracts-container">
+        <p style="text-align: center;">جاري تحميل ورديات التغطية...</p>
+    </div>
+</div>
+                <div id="page-visits" class="page-content hidden"><p>محتوى صفحة الزيارات هنا.</p></div>
+                <div id="page-reports" class="page-content hidden"><p>محتوى صفحة التقارير هنا.</p></div>
+<div id="page-contracts" class="page-content hidden">
+                    <div class="page-header">
+                        <h3>إدارة العقود</h3>
+                        <button id="add-contract-btn" class="btn btn-primary"><i class="ph-bold ph-plus"></i> <span>إضافة عقد جديد</span></button>
+                    </div>
+                    <div id="contracts-list-container">
+                        <p style="text-align: center;">جاري تحميل العقود...</p>
+                    </div>
+                </div>
+
+                <div id="page-vacancies" class="page-content hidden">
+    <div class="page-header">
+        <h3>إدارة الشواغر</h3>
+    </div>
+    <div class="stats-grid">
+        <div class="stat-card-mini" style="--stat-color: #3b82f6;">
+            <i class="ph-bold ph-file-text"></i>
+            <div><h4 id="hr-stats-required">0</h4><p>إجمالي المطلوب بالعقود</p></div>
+        </div>
+        <div class="stat-card-mini" style="--stat-color: #16a34a;">
+            <i class="ph-bold ph-users"></i>
+            <div><h4 id="hr-stats-assigned">0</h4><p>الموظفون المعينون</p></div>
+        </div>
+        <div class="stat-card-mini" style="--stat-color: #ef4444;">
+            <i class="ph-bold ph-warning-circle"></i>
+            <div><h4 id="hr-stats-gap">0</h4><p>العجز الحالي</p></div>
+        </div>
+    </div>
+    <div class="table-container" style="margin-top: 30px;">
+        <div class="table-header">
+    <h3>قائمة الشواغر</h3>
+    <div style="display: flex; gap: 10px;">
+        <button id="view-available-slots-btn" class="btn btn-success">
+            <i class="ph-bold ph-user-plus"></i> عرض الشواغر المتاحة بالعقود
+        </button>
+        <button id="add-vacancy-btn" class="btn btn-primary"><i class="ph-bold ph-plus"></i> إضافة شاغر جديد</button>
+    </div>
+</div>
+        <div id="vacancies-list-container">
+            <p style="text-align: center;">جاري تحميل الشواغر...</p>
+        </div>
+    </div>
+</div>
+
+<div id="page-employees" class="page-content hidden">
+    <div class="table-container">
+        <div class="page-header" style="padding:0; border:0; margin-bottom:20px;">
+            <h3>قائمة الموظفين</h3>
+             <button id="add-employee-btn" class="btn btn-primary"><i class="ph-bold ph-plus"></i> إضافة موظف جديد</button>
+        </div>
+        <div class="filter-grid" style="padding: 20px; background-color: #f8f9fa; border-radius: 8px; margin-bottom:20px;">
+            <div class="form-group"><label>بحث بالاسم أو الهوية</label><input type="text" id="employee-search-input" placeholder="ابحث..."></div>
+            <div class="form-group"><label>فلترة حسب الدور</label><select id="employee-role-filter"><option value="">الكل</option><option value="حارس أمن">حارس أمن</option><option value="مشرف">مشرف</option><option value="ادارة العمليات">ادارة العمليات</option><option value="ادارة الموارد البشرية">ادارة الموارد البشرية</option><option value="ادارة العقود">ادارة العقود</option></select></div>
+            <div class="form-group"><label>فلترة حسب المشروع</label><input type="text" id="employee-project-filter" placeholder="اسم المشروع..."></div>
+        </div>
+        <div id="employees-list-container">
+             <p style="text-align: center;">جاري تحميل الموظفين...</p>
+        </div>
+    </div>
+</div>
+
+<div id="page-employee-requests" class="page-content hidden">
+    <div class="page-header">
+        <h3>مراجعة طلبات الموظفين</h3>
+    </div>
+    <div id="all-requests-container">
+        <p style="text-align: center;">جاري تحميل الطلبات...</p>
+    </div>
+</div>
+<div id="page-operations-requests" class="page-content hidden">
+    <div class="page-header">
+        <h3>طلبات التوظيف من العمليات</h3>
+    </div>
+    <div id="all-operations-requests-container">
+        <p style="text-align: center;">جاري تحميل طلبات التوظيف...</p>
+    </div>
+</div>
+<div id="page-leave-requests" class="page-content hidden">
+    <div class="page-header"><h3>طلبات الإجازات</h3></div>
+    <div id="all-leave-requests-container" class="all-requests-container">
+        <p style="text-align: center;">جاري تحميل طلبات الإجازات...</p>
+    </div>
+</div>
+
+<div id="page-resignation-requests" class="page-content hidden">
+    <div class="page-header"><h3>طلبات الاستقالات</h3></div>
+    <div id="all-resignation-requests-container" class="all-requests-container">
+        <p style="text-align: center;">جاري تحميل طلبات الاستقالات...</p>
+    </div>
+</div>
+
+<div id="page-loan-requests" class="page-content hidden">
+    <div class="page-header"><h3>طلبات السلف</h3></div>
+    <div id="all-loan-requests-container" class="all-requests-container">
+        <p style="text-align: center;">جاري تحميل طلبات السلف...</p>
+    </div>
+</div>
+<div id="page-hr-attendance-log" class="page-content hidden">
+    <div class="page-header">
+        <h3>سجل حضور وانصراف الحراس</h3>
+    </div>
+    <div class="report-filters-card" style="margin-bottom: 20px;">
+        <div class="filter-grid" style="grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));">
+            <div class="filter-group">
+                <label for="hr-attendance-from">من تاريخ</label>
+                <input type="date" id="hr-attendance-from">
+            </div>
+            <div class="filter-group">
+                <label for="hr-attendance-to">إلى تاريخ</label>
+                <input type="date" id="hr-attendance-to">
+            </div>
+             <div class="filter-group">
+                <label for="hr-attendance-status">الحالة</label>
+                <select id="hr-attendance-status">
+                    <option value="">الكل</option>
+                    <option value="حاضر">حاضر</option>
+                    </select>
+            </div>
+            <div class="filter-group" style="align-items: flex-end;">
+                 <button id="hr-attendance-search-btn" class="btn btn-primary" style="width: 100%;">بحث</button>
+            </div>
+        </div>
+    </div>
+    <div id="hr-attendance-accordion-container" class="attendance-accordion">
+        <p style="text-align: center;">الرجاء تحديد فترة زمنية لعرض السجلات.</p>
+    </div>
+</div>
+<div id="page-payroll" class="page-content hidden">
+    <div class="page-header">
+        <h3>مسير الرواتب</h3>
+    </div>
+    <div class="report-filters-card" style="margin-bottom: 20px;">
+        <div class="filter-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+            <div class="filter-group">
+                <label for="payroll-month">اختر الشهر والسنة</label>
+                <input type="month" id="payroll-month">
+            </div>
+            <div class="filter-group">
+                <label for="payroll-project">فلترة حسب المشروع (اختياري)</label>
+                <input type="text" id="payroll-project" placeholder="اتركه فارغاً للكل">
+            </div>
+            <div class="filter-group">
+    <label for="payroll-location">فلترة حسب الموقع (اختياري)</label>
+    <input type="text" id="payroll-location" placeholder="اتركه فارغاً للكل">
+</div>
+            <div class="filter-group" style="align-items: flex-end;">
+                 <button id="generate-payroll-btn" class="btn btn-primary" style="width: 100%;">
+                    <i class="ph-bold ph-calculator"></i> توليد المسير
+                 </button>
+            </div>
+        </div>
+    </div>
+    <div id="payroll-results-container" class="table-container">
+        <p style="text-align: center;">الرجاء اختيار الشهر والضغط على "توليد المسير" لعرض البيانات.</p>
+    </div>
+</div>
+<div id="page-hiring" class="page-content hidden">
+    <div class="page-header">
+        <h3>التوظيف وتسكين الشواغر</h3>
+    </div>
+
+    <h4><i class="ph-bold ph-briefcase"></i> الشواغر المفتوحة</h4>
+    <div id="hiring-vacancies-container" class="contracts-container" style="margin-bottom: 40px;">
+        <p>جاري تحميل الشواغر...</p>
+    </div>
+
+    <hr>
+
+    <h4><i class="ph-bold ph-file-arrow-up"></i> طلبات التوظيف المقدمة</h4>
+    <div id="hiring-requests-history-container">
+        <p>جاري تحميل طلباتك السابقة...</p>
+    </div>
+</div>
+
+<div id="page-attendance" class="page-content hidden"></div>
+
+<div id="page-my-requests" class="page-content hidden">
+    <div class="page-header">
+        <h3>رفع طلب جديد</h3>
+    </div>
+    <div class="requests-actions-container">
+        <button class="request-action-card" data-request-type="permission" style="--card-color: #0d6efd;">
+            <i class="ph-fill ph-clock-countdown"></i>
+            <h4>طلب استئذان</h4>
+        </button>
+        <button class="request-action-card" data-request-type="leave" style="--card-color: #198754;">
+            <i class="ph-fill ph-calendar-blank"></i>
+            <h4>طلب إجازة</h4>
+        </button>
+        <button class="request-action-card" data-request-type="loan" style="--card-color: #ffc107;">
+            <i class="ph-fill ph-hand-coins"></i>
+            <h4>طلب سلفة</h4>
+        </button>
+        <button class="request-action-card" data-request-type="resignation" style="--card-color: #dc3545;">
+            <i class="ph-fill ph-file-x"></i>
+            <h4>طلب استقالة</h4>
+        </button>
+    </div>
+    <div class="page-header" style="margin-top: 40px;">
+        <h3>متابعة طلباتك السابقة</h3>
+    </div>
+    <div id="past-requests-list">
+    </div>
+</div>
+
+<div id="page-permission-requests" class="page-content hidden">
+    <div class="page-header">
+        <h3>طلبات الاستئذان المعلقة</h3>
+    </div>
+    <div id="permission-requests-container">
+    </div>
+</div>
+
+<div id="page-guard-attendance" class="page-content hidden">
+    <div class="page-header">
+        <h3>متابعة حضور الحراس</h3>
+        <button id="request-transfer-btn" class="btn btn-secondary"><i class="ph-bold ph-arrows-clockwise"></i> <span>طلب نقل حارس</span></button>
+    </div>
+    <div id="guard-attendance-container">
+        <p style="text-align: center;">جاري تحميل بيانات الحضور...</p>
+    </div>
+</div>
+
+<div id="page-patrol" class="page-content hidden">
+    <div class="page-header">
+        <h3>تسجيل الجولة الميدانية</h3>
+    </div>
+    <div class="attendance-card">
+        <div id="patrol-status" class="attendance-status-text">
+            <p>جاري التحقق من حالتك...</p>
+        </div>
+        <div id="patrol-actions">
+            <button id="start-patrol-btn" class="btn btn-primary btn-lg hidden">بدء الجولة</button>
+            <button id="end-patrol-btn" class="btn btn-danger btn-lg hidden">إنهاء الجولة</button>
+        </div>
+        <div id="location-status" class="location-status">
+        </div>
+    </div>
+</div>
+
+<div id="page-coverage-requests" class="page-content hidden">
+    <div class="page-header">
+        <h3>مراجعة طلبات التغطية</h3>
+    </div>
+    <div id="coverage-requests-container" class="all-requests-container">
+        <p style="text-align: center;">جاري تحميل الطلبات المعتمدة من العمليات...</p>
+    </div>
+</div>
+<div id="page-directives-ops" class="page-content hidden">
+    <div class="page-header">
+        <h3>إرسال التوجيهات</h3>
+    </div>
+    <div class="tabs">
+        <a href="#" class="tab-link active" data-tab="ops-send-directive">إرسال توجيه</a>
+        <a href="#" class="tab-link" data-tab="ops-directives-history">سجل التوجيهات المرسلة</a>
+    </div>
+    <div id="ops-send-directive" class="tab-content active">
+        <p>اختر موظفاً من القائمة لإرسال توجيه له.</p>
+        <div id="ops-users-list-container" class="attendance-list" style="margin-top: 20px;">
+            </div>
+    </div>
+    <div id="ops-directives-history" class="tab-content">
+        <div id="ops-history-list-container">
+            </div>
+    </div>
+</div>
+<div id="page-my-directives" class="page-content hidden">
+    <div class="page-header">
+        <h3>التوجيهات</h3>
+    </div>
+    <div class="tabs">
+        <a href="#" class="tab-link active" data-tab="incoming-directives"><i class="ph-bold ph-arrow-down-left"></i> التوجيهات الواردة</a>
+        <a href="#" class="tab-link" data-tab="send-directive-from-supervisor" style="display: none;"><i class="ph-bold ph-paper-plane-tilt"></i> إرسال توجيه</a>
+        <a href="#" class="tab-link" data-tab="supervisor-directives-history" style="display: none;"><i class="ph-bold ph-clock-counter-clockwise"></i> سجل الإرسال</a>
+    </div>
+
+    <div id="incoming-directives" class="tab-content active">
+        <div id="my-directives-container"></div>
+    </div>
+
+    <div id="send-directive-from-supervisor" class="tab-content">
+        <p>اختر حارساً من القائمة لإرسال توجيه له.</p>
+        <div id="supervisor-guards-list-container" class="attendance-list" style="margin-top: 20px;"></div>
+    </div>
+
+    <div id="supervisor-directives-history" class="tab-content">
+        <div id="supervisor-history-list-container"></div>
+    </div>
+</div>
+<div id="page-my-visits" class="page-content hidden">
+    <div class="page-header">
+        <h3>سجل زياراتي الميدانية</h3>
+        <button id="add-visit-log-btn" class="btn btn-primary">
+            <i class="ph-bold ph-plus-circle"></i> تسجيل زيارة جديدة
+        </button>
+    </div>
+    <div id="my-visits-list-container">
+        </div>
+</div>
+<div id="page-my-schedule" class="page-content hidden">
+    <div class="page-header">
+        <h3>جدول وردياتي</h3>
+    </div>
+    <div id="my-schedule-container">
+        </div>
+</div>
+<div id="page-ops-review-requests" class="page-content hidden">
+    <div class="page-header">
+        <h3>مراجعة طلبات موظفي المشروع</h3>
+    </div>
+    <div id="ops-review-requests-container" class="all-requests-container">
+        <p style="text-align: center;">جاري تحميل الطلبات...</p>
+    </div>
+</div>
+<div id="page-supervisor-schedules" class="page-content hidden">
+    <div class="page-header">
+        <h3>جداول الحراس في مشروعك</h3>
+    </div>
+    <div id="supervisor-schedules-container" class="contracts-container">
+        </div>
+</div>
+<div id="page-supervisor-permission-requests" class="page-content hidden">
+    <div class="page-header">
+        <h3>مراجعة طلبات استئذان الحراس</h3>
+    </div>
+    <div id="supervisor-permission-requests-container" class="all-requests-container">
+        </div>
+</div>
+</div> </main>
+
+
+
+<div id="page-attendance" class="page-content hidden"></div>
+<div id="page-my-requests" class="page-content hidden">
+    <div class="page-header">
+        <h3>رفع طلب جديد</h3>
+    </div>
+    <div class="requests-actions-container">
+        <button class="request-action-card" data-request-type="permission" style="--card-color: #0d6efd;">
+            <i class="ph-fill ph-clock-countdown"></i>
+            <h4>طلب استئذان</h4>
+        </button>
+        <button class="request-action-card" data-request-type="leave" style="--card-color: #198754;">
+            <i class="ph-fill ph-calendar-blank"></i>
+            <h4>طلب إجازة</h4>
+        </button>
+        <button class="request-action-card" data-request-type="loan" style="--card-color: #ffc107;">
+            <i class="ph-fill ph-hand-coins"></i>
+            <h4>طلب سلفة</h4>
+        </button>
+        <button class="request-action-card" data-request-type="resignation" style="--card-color: #dc3545;">
+            <i class="ph-fill ph-file-x"></i>
+            <h4>طلب استقالة</h4>
+        </button>
+    </div>
+    <div class="page-header" style="margin-top: 40px;">
+        <h3>متابعة طلباتك السابقة</h3>
+    </div>
+    <div id="past-requests-list">
+        </div>
+</div>
+
+<div id="page-permission-requests" class="page-content hidden">
+    <div class="page-header">
+        <h3>طلبات الاستئذان المعلقة</h3>
+    </div>
+    <div id="permission-requests-container">
+        </div>
+</div>
+
+<div id="page-guard-attendance" class="page-content hidden">
+    <div class="page-header">
+        <h3>متابعة حضور الحراس</h3>
+        <button id="request-transfer-btn" class="btn btn-secondary"><i class="ph-bold ph-arrows-clockwise"></i> <span>طلب نقل حارس</span></button>
+    </div>
+    <div id="guard-attendance-container">
+        <p style="text-align: center;">جاري تحميل بيانات الحضور...</p>
+    </div>
+</div>
+
+<div id="page-patrol" class="page-content hidden">
+    <div class="page-header">
+        <h3>تسجيل الجولة الميدانية</h3>
+    </div>
+    <div class="attendance-card">
+        <div id="patrol-status" class="attendance-status-text">
+            <p>جاري التحقق من حالتك...</p>
+        </div>
+        <div id="patrol-actions">
+            <button id="start-patrol-btn" class="btn btn-primary btn-lg hidden">بدء الجولة</button>
+            <button id="end-patrol-btn" class="btn btn-danger btn-lg hidden">إنهاء الجولة</button>
+        </div>
+        <div id="location-status" class="location-status">
+            </div>
+    </div>
+
+
+
+</div>
+
+
+
+
+
+    <script src="app.js"></script>
+    
+<div id="permission-request-modal" class="modal-overlay hidden">
+    <div class="modal-panel">
+        <div class="modal-header"><h4>طلب استئذان</h4><button class="modal-close-btn"><i class="ph-bold ph-x"></i></button></div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="permission-reason">سبب الاستئذان</label>
+                <textarea id="permission-reason" rows="4" placeholder="يرجى توضيح سبب طلب الاستئذان بالتفصيل..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-primary btn-submit-request" data-request-type="permission">إرسال الطلب</button><button class="btn btn-secondary modal-close-btn">إلغاء</button></div>
+    </div>
+</div>
+
+<div id="leave-request-modal" class="modal-overlay hidden">
+    <div class="modal-panel">
+        <div class="modal-header"><h4>طلب إجازة</h4><button class="modal-close-btn"><i class="ph-bold ph-x"></i></button></div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="leave-start-date">تاريخ بداية الإجازة</label>
+                <input type="date" id="leave-start-date">
+            </div>
+            <div class="form-group">
+                <label for="leave-days">عدد الأيام</label>
+                <input type="number" id="leave-days" min="1" value="1">
+            </div>
+            <div class="form-group">
+                <label for="leave-reason">سبب الإجازة</label>
+                <textarea id="leave-reason" rows="3" placeholder="يرجى توضيح سبب طلب الإجازة..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-primary btn-submit-request" data-request-type="leave">إرسال الطلب</button><button class="btn btn-secondary modal-close-btn">إلغاء</button></div>
+    </div>
+</div>
+
+<div id="loan-request-modal" class="modal-overlay hidden">
+    <div class="modal-panel">
+        <div class="modal-header"><h4>طلب سلفة</h4><button class="modal-close-btn"><i class="ph-bold ph-x"></i></button></div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="loan-amount">مبلغ السلفة (ر.س)</label>
+                <input type="number" id="loan-amount" placeholder="مثال: 500">
+            </div>
+            <div class="form-group">
+                <label for="loan-reason">سبب السلفة</label>
+                <textarea id="loan-reason" rows="4" placeholder="يرجى توضيح سبب طلب السلفة..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-primary btn-submit-request" data-request-type="loan">إرسال الطلب</button><button class="btn btn-secondary modal-close-btn">إلغاء</button></div>
+    </div>
+</div>
+
+<div id="resignation-request-modal" class="modal-overlay hidden">
+    <div class="modal-panel">
+        <div class="modal-header"><h4>طلب استقالة</h4><button class="modal-close-btn"><i class="ph-bold ph-x"></i></button></div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="resignation-reason">سبب الاستقالة</label>
+                <textarea id="resignation-reason" rows="5" placeholder="يرجى توضيح أسباب رغبتك في تقديم الاستقالة..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-primary btn-submit-request" data-request-type="resignation">تأكيد وإرسال الطلب</button><button class="btn btn-secondary modal-close-btn">إلغاء</button></div>
+    </div>
+</div>
+
+<div id="guard-transfer-modal" class="modal-overlay hidden">
+    <div class="modal-panel">
+        <div class="modal-header">
+            <h4>طلب نقل حارس</h4>
+            <button class="modal-close-btn"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="transfer-guard-select">اختر الحارس</label>
+                <select id="transfer-guard-select">
+                    <option>جاري تحميل الحراس...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="transfer-client-select">اختر الموقع الجديد</label>
+                <select id="transfer-client-select">
+                    <option>جاري تحميل المواقع...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="transfer-reason">سبب النقل</label>
+                <textarea id="transfer-reason" rows="4" placeholder="يرجى توضيح سبب طلب النقل..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="submit-transfer-request-btn" class="btn btn-primary">إرسال طلب النقل</button>
+            <button class="btn btn-secondary modal-close-btn">إلغاء</button>
+        </div>
+    </div>
+</div>
+<div id="add-visit-modal" class="modal-overlay hidden">
+    <div class="modal-panel">
+        <div class="modal-header">
+            <h4>تسجيل زيارة ميدانية جديدة</h4>
+            <button class="modal-close-btn"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="visit-client-select">اختر الموقع الذي تمت زيارته</label>
+                <select id="visit-client-select">
+                    <option>جاري تحميل المواقع...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="visit-time-input">وقت وتاريخ الزيارة</label>
+                <input type="datetime-local" id="visit-time-input">
+            </div>
+            <div class="form-group">
+                <label for="visit-notes-textarea">الملاحظات</label>
+                <textarea id="visit-notes-textarea" rows="5" placeholder="اكتب ملاحظاتك عن الزيارة، حالة الموقع، أداء الحراس، إلخ..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="submit-visit-btn" class="btn btn-primary">حفظ الزيارة</button>
+            <button class="btn btn-secondary modal-close-btn">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<div id="contract-modal" class="modal-overlay hidden">
+    <div class="modal-panel" style="max-width: 800px;">
+        <div class="modal-header">
+            <h4 id="contract-modal-title">إضافة عقد جديد</h4>
+            <button class="modal-close-btn"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="contract-id">
+            
+            <h4>1. المعلومات الأساسية للعقد</h4>
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                <div class="form-group">
+                    <label for="contract-client-name">اسم الشركة (العميل)</label>
+                    <input type="text" id="contract-client-name" placeholder="مثال: شركة بنده للتجزئة">
+                </div>
+                <div class="form-group">
+                    <label for="contract-region">المنطقة</label>
+                    <input type="text" id="contract-region" placeholder="مثال: المنطقة الوسطى">
+                </div>
+                <div class="form-group">
+                    <label for="contract-city">المدينة</label>
+                    <input type="text" id="contract-city" placeholder="مثال: الرياض">
+                </div>
+                <div class="form-group">
+                    <label for="contract-individual-salary">راتب الفرد (ر.س)</label>
+                    <input type="number" id="contract-individual-salary" placeholder="الراتب المحدد للحارس">
+                </div>
+                <div class="form-group">
+                    <label for="contract-status">حالة العقد</label>
+                    <select id="contract-status">
+                        <option value="pending">معلق</option>
+                        <option value="active">نشط</option>
+                        <option value="cancelled">ملغي</option>
+                    </select>
+                </div>
+            </div>
+
+            <hr style="margin: 25px 0;">
+
+            <div class="clauses-section">
+                <div class="clauses-header">
+                    <h4>2. المواقع والورديات</h4>
+                    <button id="add-location-btn" class="btn btn-secondary">
+                        <i class="ph-bold ph-plus"></i> إضافة موقع
+                    </button>
+                </div>
+                <div id="locations-container">
+                    </div>
+            </div>
+        </div>
+         <div class="modal-footer">
+            <button id="save-contract-btn" class="btn btn-primary">حفظ العقد</button>
+            <button class="btn btn-secondary modal-close-btn">إلغاء</button>
+        </div>
+    </div>
+</div>
+</div>
+<div id="vacancy-modal" class="modal-overlay hidden">
+    <div class="modal-panel" style="max-width: 800px;">
+        <div class="modal-header">
+            <h4 id="vacancy-modal-title">إضافة شاغر جديد</h4>
+            <button class="modal-close-btn"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="vacancy-id">
+            <h4>1. معلومات الشاغر الأساسية</h4>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="vacancy-title">المسمى الوظيفي</label>
+                    <select id="vacancy-title">
+                        <option value="حارس أمن">حارس أمن</option>
+                        <option value="مشرف">مشرف</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="vacancy-contract">تابع للعقد (اختياري)</label>
+                    <select id="vacancy-contract">
+                        <option value="">-- اختر عقداً --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="vacancy-project">المشروع</label>
+                    <input type="text" id="vacancy-project" placeholder="اسم المشروع (يتم ملؤه تلقائياً من العقد)">
+                </div>
+                <div class="form-group" id="specific-location-group" style="display: none;">
+    <label for="vacancy-specific-location">اختر الموقع المحدد (الفرع)</label>
+    <select id="vacancy-specific-location">
+        </select>
+</div>
+                <div class="form-group">
+                    <label for="vacancy-region">المنطقة</label>
+                    <input type="text" id="vacancy-region" placeholder="المنطقة (تتم ملؤها تلقائياً)">
+                </div>
+                 <div class="form-group">
+                    <label for="vacancy-location">المدينة</label>
+                    <input type="text" id="vacancy-location" placeholder="المدينة (تتم ملؤها تلقائياً)">
+                </div>
+                 <div class="form-group">
+                    <label for="vacancy-status">حالة الشاغر</label>
+                    <select id="vacancy-status">
+                        <option value="open">مفتوح</option>
+                        <option value="closed">مغلق</option>
+                    </select>
+                </div>
+            </div>
+            <hr style="margin: 25px 0;">
+            <h4>2. تفاصيل الراتب</h4>
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+                <div class="form-group">
+                    <label for="vacancy-base-salary">الراتب الأساسي</label>
+                    <input type="number" id="vacancy-base-salary" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="vacancy-housing">بدل السكن</label>
+                    <input type="number" id="vacancy-housing" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="vacancy-transport">بدل النقل</label>
+                    <input type="number" id="vacancy-transport" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="vacancy-other">بدلات أخرى</label>
+                    <input type="number" id="vacancy-other" value="0">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="save-vacancy-btn" class="btn btn-primary">حفظ الشاغر</button>
+            <button class="btn btn-secondary modal-close-btn">إلغاء</button>
+        </div>
+    </div>
+</div>
+<div id="employee-modal" class="modal-overlay hidden">
+    <div class="modal-panel" style="max-width: 900px;">
+        <div class="modal-header">
+            <h4 id="employee-modal-title">إضافة موظف جديد</h4>
+            <button class="modal-close-btn"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="employee-id">
+            <input type="hidden" id="employee-auth-id">
+            <input type="hidden" id="employee-creation-mode">
+            <input type="hidden" id="employee-vacancy-id">
+            <input type="hidden" id="employee-project-hidden">
+
+            <h4>1. المعلومات الشخصية والوظيفية</h4>
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                <div class="form-group">
+                    <label for="employee-name">الاسم الكامل</label>
+                    <input type="text" id="employee-name" placeholder="اسم الموظف">
+                </div>
+                <div class="form-group">
+                    <label for="employee-id-number">رقم الهوية (للدخول)</label>
+                    <input type="text" id="employee-id-number" placeholder="سيستخدم لتسجيل الدخول">
+                </div>
+                <div class="form-group">
+                    <label for="employee-phone">رقم الجوال</label>
+                    <input type="tel" id="employee-phone" placeholder="05xxxxxxxx">
+                </div>
+                 <div class="form-group">
+                    <label for="employee-role">الدور الوظيفي</label>
+                    <select id="employee-role">
+                        <option value="حارس أمن">حارس أمن</option>
+                        <option value="مشرف">مشرف</option>
+                        <option value="ادارة العمليات">ادارة العمليات</option>
+                        <option value="ادارة الموارد البشرية">ادارة الموارد البشرية</option>
+                        <option value="ادارة العقود">ادارة العقود</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="employee-password">كلمة المرور</label>
+                    <input type="password" id="employee-password" placeholder="اتركه فارغاً لعدم التغيير">
+                </div>
+            </div>
+
+            <hr style="margin: 25px 0;">
+
+            <h4>2. المعلومات المالية والإدارية</h4>
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                 <div class="form-group">
+                    <label for="employee-iban">رقم الآيبان (IBAN)</label>
+                    <input type="text" id="employee-iban" placeholder="SAxxxxxxxxxxxxxxxxxxxx">
+                </div>
+                <div class="form-group">
+                    <label for="employee-insurance">حالة التأمينات</label>
+                    <select id="employee-insurance">
+                        <option value="غير مسجل">غير مسجل</option>
+                        <option value="مسجل">مسجل</option>
+                    </select>
+                </div>
+                 <div class="form-group">
+                    <label for="employee-account-status">حالة الحساب</label>
+                    <select id="employee-account-status">
+                        <option value="active">نشط</option>
+                        <option value="inactive">غير نشط</option>
+                    </select>
+                </div>
+                 <div class="form-group">
+                    <label for="employee-type">نوع الموظف</label>
+                    <select id="employee-type">
+                        <option value="اساسي">أساسي</option>
+                        <option value="بديل">بديل</option>
+                        <option value="تغطية">تغطية</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="employee-status">الحالة الوظيفية</label>
+                    <select id="employee-status">
+                        <option value="نشط">نشط</option>
+                        <option value="اجازة">إجازة</option>
+                        <option value="معلق">معلق</option>
+                        <option value="مستقيل">مستقيل</option>
+                    </select>
+                </div>
+            </div>
+
+            <hr style="margin: 25px 0;">
+
+            <h4>3. التسكين الوظيفي</h4>
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                <div class="form-group">
+                    <label for="employee-contract">تابع للعقد</label>
+                    <select id="employee-contract">
+                        <option value="">غير محدد</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="employee-vacancy">الشاغر المحدد</label>
+                    <select id="employee-vacancy">
+                        <option value="">غير محدد</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group hidden" id="employee-shift-group">
+    <label for="employee-shift">اختر الوردية</label>
+    <select id="employee-shift">
+        <option value="">-- اختر وردية --</option>
+    </select>
+</div>
+            
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr; margin-top: 20px;">
+                <div class="form-group">
+                    <label for="employee-project-display">المشروع</label>
+                    <input type="text" id="employee-project-display" placeholder="يُملأ تلقائياً" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="employee-location-display">الموقع المحدد</label>
+                    <input type="text" id="employee-location-display" placeholder="يُملأ تلقائياً" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="employee-region">المنطقة</label>
+                    <input type="text" id="employee-region" placeholder="ادخل المنطقة">
+                </div>
+                <div class="form-group">
+                    <label for="employee-city">المدينة</label>
+                    <input type="text" id="employee-city" placeholder="ادخل المدينة">
+                </div>
+            </div>
+            </div>
+        <div class="modal-footer">
+            <button id="save-employee-btn" class="btn btn-primary">حفظ الموظف</button>
+            <button class="btn btn-secondary modal-close-btn">إلغاء</button>
+        </div>
+    </div>
+</div>
+<div id="view-contract-modal" class="modal-overlay hidden">
+    <div class="modal-panel" style="max-width: 700px;">
+        <div class="modal-header">
+            <h4>تفاصيل العقد</h4>
+            <button class="modal-close-btn"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div id="contract-view-body" class="modal-body">
+            </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary modal-close-btn">إغلاق</button>
+        </div>
+    </div>
+</div>
+<div id="view-vacancy-details-modal" class="modal-overlay hidden">
+    <div class="modal-panel" style="max-width: 600px;">
+        <div class="modal-header">
+            <h4>تفاصيل الشاغر</h4>
+            <button class="modal-close-btn"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div id="vacancy-details-body" class="modal-body">
+            </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary modal-close-btn">إغلاق</button>
+        </div>
+    </div>
+</div>
+<div id="available-slots-modal" class="modal-overlay hidden">
+    <div class="modal-panel" style="max-width: 800px;">
+        <div class="modal-header">
+            <h4><i class="ph-fill ph-chart-line-up" style="color: var(--success-color);"></i> تقرير الشواغر المتاحة في العقود النشطة</h4>
+            <button class="modal-close-btn"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div id="available-slots-body" class="modal-body">
+            <p style="text-align: center;">جاري حساب الشواغر المتاحة...</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary modal-close-btn">إغلاق</button>
+        </div>
+    </div>
+</div>
+<div id="add-to-coverage-modal" class="modal-overlay hidden">
+    <div class="modal-panel" style="max-width: 600px;">
+        <div class="modal-header">
+            <h4>إضافة وردية للتغطية</h4>
+            <button class="modal-close-btn"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="coverage-original-shift-details">
+            <p>أنت على وشك إضافة وردية الحارس الغائب كفرصة تغطية متاحة. يرجى تحديد التفاصيل:</p>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="coverage-pay">قيمة التغطية (ر.س)</label>
+                    <input type="number" id="coverage-pay" placeholder="مثال: 150">
+                </div>
+                <div class="form-group">
+                    <label for="coverage-reason">سبب التغطية</label>
+                    <select id="coverage-reason">
+                        <option value="غياب">غياب</option>
+                        <option value="اجازة">اجازة</option>
+                        <option value="استئذان">استئذان</option>
+                        <option value="احتياج إضافي">احتياج إضافي</option>
+                    </select>
+                </div>
+            </div>
+             <div class="form-grid">
+                <div class="form-group">
+                    <label for="coverage-start-time">من ساعة</label>
+                    <input type="time" id="coverage-start-time">
+                </div>
+                <div class="form-group">
+                    <label for="coverage-end-time">إلى ساعة</label>
+                    <input type="time" id="coverage-end-time">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="save-coverage-shift-btn" class="btn btn-primary">حفظ وطرح للتغطية</button>
+            <button class="btn btn-secondary modal-close-btn">إلغاء</button>
+        </div>
+    </div>
+</div>
+<div id="view-applicants-modal" class="modal-overlay hidden">
+    <div class="modal-panel" style="max-width: 800px;">
+        <div class="modal-header">
+            <h4>المتقدمون للوردية</h4>
+            <button class="modal-close-btn"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div class="modal-body" id="applicants-list-body">
+            <p style="text-align:center;">جاري تحميل المتقدمين...</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary modal-close-btn">إغلاق</button>
+        </div>
+    </div>
+</div>
+<div id="create-coverage-modal" class="modal-overlay hidden">
+    <div class="modal-panel" style="max-width: 700px;">
+        <div class="modal-header">
+            <h4>إنشاء تغطية جديدة</h4>
+            <button class="modal-close-btn"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="coverage-edit-id">
+            <div class="form-group">
+                <label for="coverage-link-vacancy">ربط بشاغر مفتوح (اختياري)</label>
+                <select id="coverage-link-vacancy">
+                    <option value="">-- تغطية يدوية بدون ربط بشاغر --</option>
+                </select>
+            </div>
+            <hr style="margin: 25px 0;">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="coverage-new-project">المشروع</label>
+                    <input type="text" id="coverage-new-project" placeholder="اسم المشروع">
+                </div>
+                <div class="form-group">
+                    <label for="coverage-new-location">الموقع (الفرع)</label>
+                    <input type="text" id="coverage-new-location" placeholder="اسم الموقع المحدد">
+                </div>
+                <div class="form-group">
+                    <label for="coverage-new-region">المنطقة</label>
+                    <input type="text" id="coverage-new-region" placeholder="المنطقة">
+                </div>
+                <div class="form-group">
+                    <label for="coverage-new-city">المدينة</label>
+                    <input type="text" id="coverage-new-city" placeholder="المدينة">
+                </div>
+            </div>
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                <div class="form-group">
+                    <label for="coverage-new-start-time">من ساعة</label>
+                    <input type="time" id="coverage-new-start-time">
+                </div>
+                <div class="form-group">
+                    <label for="coverage-new-end-time">إلى ساعة</label>
+                    <input type="time" id="coverage-new-end-time">
+                </div>
+                <div class="form-group">
+                    <label for="coverage-new-pay">قيمة التغطية (ر.س)</label>
+                    <input type="number" id="coverage-new-pay" placeholder="مثال: 150">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="coverage-new-reason">سبب التغطية</label>
+                <select id="coverage-new-reason">
+                    <option value="غياب">غياب</option>
+                    <option value="اجازة">اجازة</option>
+                    <option value="استئذان">استئذان</option>
+                    <option value="احتياج إضافي">احتياج إضافي</option>
+                    <option value="شاغر مؤقت">شاغر مؤقت</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="save-new-coverage-btn" class="btn btn-primary">حفظ وطرح للتغطية</button>
+            <button class="btn btn-secondary modal-close-btn">إلغاء</button>
+        </div>
+    </div>
+</div>
+<div id="send-directive-modal" class="modal-overlay hidden">
+    <div class="modal-panel">
+        <div class="modal-header">
+            <h4 id="send-directive-modal-title">إرسال توجيه إلى: </h4>
+            <button class="modal-close-btn"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="directive-recipient-id">
+            <div class="form-group">
+                <label for="directive-content">نص التوجيه</label>
+                <textarea id="directive-content" rows="6" placeholder="اكتب نص التوجيه هنا..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="send-directive-btn" class="btn btn-primary">إرسال</button>
+            <button class="btn btn-secondary modal-close-btn">إلغاء</button>
+        </div>
+    </div>
+</div>
+<div id="end-patrol-modal" class="modal-overlay hidden">
+    <div class="modal-panel">
+        <div class="modal-header">
+            <h4>إنهاء الجولة الميدانية</h4>
+            <button class="modal-close-btn"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="active-patrol-id">
+            <div class="form-group">
+                <label for="patrol-notes">ملاحظات نهاية الجولة</label>
+                <textarea id="patrol-notes" rows="6" placeholder="اكتب ملخصاً أو ملاحظات هامة عن الجولة..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="confirm-end-patrol-btn" class="btn btn-primary">تأكيد وإنهاء الجولة</button>
+            <button class="btn btn-secondary modal-close-btn">إلغاء</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>
