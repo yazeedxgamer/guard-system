@@ -1271,6 +1271,44 @@ async function loadHrOpsHiringPage() {
 }
 // نهاية الاستبدال
 
+// --- دالة للاستماع المباشر للتوجيهات وإظهار إشعار ---
+function initializeRealtimeNotifications(userId) {
+  // التأكد من إيقاف أي استماع قديم
+  supabaseClient.removeAllChannels();
+
+  const channel = supabaseClient
+    .channel(`directives-for-${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'directives',
+        filter: `recipient_id=eq.${userId}`,
+      },
+      (payload) => {
+        console.log('New directive received via Realtime!', payload.new);
+
+        Notification.requestPermission().then((permission) => {
+          if (permission === 'granted') {
+            const directive = payload.new;
+            const notificationTitle = 'لديك توجيه جديد من الإدارة';
+            const notificationOptions = {
+              body: directive.content.substring(0, 100),
+              icon: 'icon-192.png',
+            };
+            new Notification(notificationTitle, notificationOptions);
+          }
+        });
+      }
+    )
+    .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+            console.log(`Successfully subscribed to Realtime channel for user ${userId}!`);
+        }
+    });
+}
+
 // بداية الاستبدال
 // دالة تحميل طلبات التغطية للموارد البشرية (مع تنسيق الوقت)
 async function loadCoverageRequestsPage() {
@@ -3284,37 +3322,18 @@ if (sendDirectiveBtn) {
     sendDirectiveBtn.textContent = 'جاري الإرسال...';
 
     try {
-        const { error: insertError } = await supabaseClient
+        // الآن، كل ما نفعله هو حفظ التوجيه. قاعدة البيانات سترسله مباشرة للمستقبل
+        const { error } = await supabaseClient
             .from('directives')
             .insert({ sender_id: currentUser.id, recipient_id: recipientId, content: content });
 
-        if (insertError) throw insertError;
+        if (error) throw error;
+
         alert('تم إرسال التوجيه بنجاح.');
         document.getElementById('send-directive-modal').classList.add('hidden');
         if (currentUser.role === 'ادارة العمليات') loadOpsDirectivesHistory();
         if (currentUser.role === 'مشرف') loadSupervisorDirectivesHistory();
 
-        // --- إعادة كود استدعاء الدالة من المتصفح ---
-        const { data: recipient, error: fetchError } = await supabaseClient
-            .from('users')
-            .select('push_subscription')
-            .eq('id', recipientId)
-            .single();
-
-        if (fetchError) throw new Error(`خطأ جلب المستلم: ${fetchError.message}`);
-
-        if (recipient && recipient.push_subscription) {
-            const payload = {
-                title: `توجيه جديد من: ${currentUser.name}`,
-                body: content.substring(0, 100),
-                url: '/#page-my-directives' 
-            };
-            // استدعاء الدالة الجديدة
-            const { error: pushError } = await supabaseClient.functions.invoke('push-trigger', {
-                body: { subscription: recipient.push_subscription, payload: payload }
-            });
-            if (pushError) throw pushError; // عرض أي خطأ يحدث
-        }
     } catch (error) {
         alert('حدث خطأ أثناء إرسال التوجيه: ' + error.message);
     } finally {
@@ -5513,6 +5532,7 @@ if (loginForm) {
 
             console.log('%cنجاح! تم العثور على المستخدم:', 'color: green; font-weight: bold;', userProfile);
             currentUser = userProfile;
+            initializeRealtimeNotifications(userProfile.id);
 
             // حفظ الجلسة الحقيقية (Supabase يقوم بذلك تلقائياً)
             // لم نعد بحاجة لـ sessionStorage
