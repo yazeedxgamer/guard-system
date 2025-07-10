@@ -3298,7 +3298,8 @@ if (sendDirectiveBtn) {
         if (currentUser.role === 'مشرف') loadSupervisorDirectivesHistory();
 
     } catch (error) {
-        alert('حدث خطأ أثناء إرسال التوجيه: ' + error.message);
+        console.error("Directive insert failed. Full error object:", error);
+alert('حدث خطأ أثناء إرسال التوجيه. التفاصيل موجودة في الـ console.');
     } finally {
         sendDirectiveBtn.disabled = false;
         sendDirectiveBtn.textContent = 'إرسال';
