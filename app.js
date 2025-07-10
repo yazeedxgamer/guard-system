@@ -3274,6 +3274,7 @@ if (directiveActionBtn) {
 // --- عند الضغط على زر "إرسال" داخل نافذة التوجيه ---
 const sendDirectiveBtn = event.target.closest('#send-directive-btn');
 if (sendDirectiveBtn) {
+    console.log("--- Send Directive Button Clicked! ---");
     const recipientId = document.getElementById('directive-recipient-id').value;
     const content = document.getElementById('directive-content').value;
 
