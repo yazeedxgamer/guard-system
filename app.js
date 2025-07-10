@@ -3284,22 +3284,39 @@ if (sendDirectiveBtn) {
     sendDirectiveBtn.textContent = 'جاري الإرسال...';
 
     try {
-        // الآن، كل ما نفعله هو حفظ التوجيه في قاعدة البيانات
-        // والمُشغِّل (Trigger) الذي أنشأناه سيتولى الباقي تلقائياً
-        const { error } = await supabaseClient
+        const { error: insertError } = await supabaseClient
             .from('directives')
             .insert({ sender_id: currentUser.id, recipient_id: recipientId, content: content });
 
-        if (error) throw error;
-
+        if (insertError) throw insertError;
         alert('تم إرسال التوجيه بنجاح.');
         document.getElementById('send-directive-modal').classList.add('hidden');
         if (currentUser.role === 'ادارة العمليات') loadOpsDirectivesHistory();
         if (currentUser.role === 'مشرف') loadSupervisorDirectivesHistory();
 
+        // --- إعادة كود استدعاء الدالة من المتصفح ---
+        const { data: recipient, error: fetchError } = await supabaseClient
+            .from('users')
+            .select('push_subscription')
+            .eq('id', recipientId)
+            .single();
+
+        if (fetchError) throw new Error(`خطأ جلب المستلم: ${fetchError.message}`);
+
+        if (recipient && recipient.push_subscription) {
+            const payload = {
+                title: `توجيه جديد من: ${currentUser.name}`,
+                body: content.substring(0, 100),
+                url: '/#page-my-directives' 
+            };
+            // استدعاء الدالة الجديدة
+            const { error: pushError } = await supabaseClient.functions.invoke('push-trigger', {
+                body: { subscription: recipient.push_subscription, payload: payload }
+            });
+            if (pushError) throw pushError; // عرض أي خطأ يحدث
+        }
     } catch (error) {
-        console.error("Directive insert failed. Full error object:", error);
-alert('حدث خطأ أثناء إرسال التوجيه. التفاصيل موجودة في الـ console.');
+        alert('حدث خطأ أثناء إرسال التوجيه: ' + error.message);
     } finally {
         sendDirectiveBtn.disabled = false;
         sendDirectiveBtn.textContent = 'إرسال';
