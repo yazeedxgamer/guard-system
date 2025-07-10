@@ -2633,6 +2633,46 @@ if (event.target.id === 'coverage-link-vacancy') {
 // --- 3. Master Click Handler for the entire application ---
 document.body.addEventListener('click', async function(event) {
 
+    // --- منطق تفعيل الإشعارات ---
+const enableNotificationsBtn = event.target.closest('#enable-notifications-btn');
+if (enableNotificationsBtn) {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        return alert('عذراً، متصفحك لا يدعم خاصية الإشعارات.');
+    }
+
+    try {
+        // طلب الإذن من المستخدم
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            throw new Error('تم رفض إذن استقبال الإشعارات.');
+        }
+
+        // استخدام المفتاح العام الذي أنشأته
+        const VAPID_PUBLIC_KEY = 'BEy1ctyS_rHMukVdltBXaYmtMXj15wVl7rBTZ-EvachLhqWNz27mZo-NmYiaMa8iIzq_uTPju5CBRYO7TMy7CDU';
+        
+        const serviceWorkerRegistration = await navigator.serviceWorker.ready;
+        const subscription = await serviceWorkerRegistration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: VAPID_PUBLIC_KEY
+        });
+
+        // حفظ بيانات الاشتراك في قاعدة البيانات للمستخدم الحالي
+        const { error } = await supabaseClient
+            .from('users')
+            .update({ push_subscription: subscription })
+            .eq('id', currentUser.id);
+
+        if (error) throw error;
+
+        alert('تم تفعيل الإشعارات لهذا الجهاز بنجاح!');
+        enableNotificationsBtn.style.color = '#22c55e'; // تلوين الأيقونة بالأخضر لتأكيد التفعيل
+
+    } catch (error) {
+        console.error('Failed to subscribe to push notifications:', error);
+        alert(`فشل تفعيل الإشعارات: ${error.message}`);
+    }
+}
+
     // --- منطق فتح وإغلاق القائمة الجانبية في الجوال ---
 const menuToggleBtn = event.target.closest('#menu-toggle-btn');
 if (menuToggleBtn) {
@@ -3233,7 +3273,6 @@ if (directiveActionBtn) {
     // بداية الإضافة: منطق إرسال التوجيه والتحكم بالتبويبات
 // --- عند الضغط على زر "إرسال" داخل نافذة التوجيه ---
 const sendDirectiveBtn = event.target.closest('#send-directive-btn');
-// بداية الاستبدال
 if (sendDirectiveBtn) {
     const recipientId = document.getElementById('directive-recipient-id').value;
     const content = document.getElementById('directive-content').value;
@@ -3243,27 +3282,45 @@ if (sendDirectiveBtn) {
     sendDirectiveBtn.disabled = true;
     sendDirectiveBtn.textContent = 'جاري الإرسال...';
 
-    const { error } = await supabaseClient
-        .from('directives')
-        .insert({ sender_id: currentUser.id, recipient_id: recipientId, content: content });
+    try {
+        // الخطوة 1: حفظ التوجيه في قاعدة البيانات
+        const { error: insertError } = await supabaseClient
+            .from('directives')
+            .insert({ sender_id: currentUser.id, recipient_id: recipientId, content: content });
 
-    if (error) {
-        alert('حدث خطأ أثناء إرسال التوجيه.');
-        console.error(error);
-    } else {
+        if (insertError) throw insertError;
+
         alert('تم إرسال التوجيه بنجاح.');
         document.getElementById('send-directive-modal').classList.add('hidden');
+        // تحديث سجل التوجيهات بناءً على دور المرسل
+        if (currentUser.role === 'ادارة العمليات') loadOpsDirectivesHistory();
+        if (currentUser.role === 'مشرف') loadSupervisorDirectivesHistory();
 
-        // تحديث السجل الصحيح بناءً على دور المستخدم
-        if (currentUser.role === 'ادارة العمليات') {
-            if(typeof loadOpsDirectivesHistory === 'function') loadOpsDirectivesHistory();
-        } else if (currentUser.role === 'مشرف') {
-            if(typeof loadSupervisorDirectivesHistory === 'function') loadSupervisorDirectivesHistory();
+        // --- الخطوة 2: إرسال الإشعار (الجزء الجديد) ---
+        const { data: recipient } = await supabaseClient
+            .from('users')
+            .select('push_subscription')
+            .eq('id', recipientId)
+            .single();
+
+        if (recipient && recipient.push_subscription) {
+            const payload = {
+                title: `توجيه جديد من: ${currentUser.name}`,
+                body: content.substring(0, 100), // عرض أول 100 حرف من التوجيه
+                url: '/#page-my-directives' 
+            };
+
+            await supabaseClient.functions.invoke('send-notification', {
+                body: { subscription: recipient.push_subscription, payload: payload }
+            });
         }
-    }
 
-    sendDirectiveBtn.disabled = false;
-    sendDirectiveBtn.textContent = 'إرسال';
+    } catch (error) {
+        alert('حدث خطأ أثناء إرسال التوجيه: ' + error.message);
+    } finally {
+        sendDirectiveBtn.disabled = false;
+        sendDirectiveBtn.textContent = 'إرسال';
+    }
 }
 // نهاية الاستبدال
 
@@ -3429,7 +3486,7 @@ async function loadSupervisorDirectivesHistory() {
 // نهاية الإضافة
 // بداية الإضافة
 // --- منطق تسجيل الخروج ---
-if (event.target.closest('#logout-btn')) {
+if (event.target.closest('#logout-btn, #logout-btn-mobile')) {
     event.preventDefault(); // منع السلوك الافتراضي للرابط
     
     if (confirm('هل أنت متأكد من رغبتك في تسجيل الخروج؟')) {
