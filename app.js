@@ -3275,8 +3275,6 @@ if (directiveActionBtn) {
 // --- عند الضغط على زر "إرسال" داخل نافذة التوجيه ---
 const sendDirectiveBtn = event.target.closest('#send-directive-btn');
 if (sendDirectiveBtn) {
-    console.log("--- Send Directive Button Clicked! ---");
-    
     const recipientId = document.getElementById('directive-recipient-id').value;
     const content = document.getElementById('directive-content').value;
 
@@ -3286,56 +3284,18 @@ if (sendDirectiveBtn) {
     sendDirectiveBtn.textContent = 'جاري الإرسال...';
 
     try {
-        // الخطوة 1: حفظ التوجيه في قاعدة البيانات
-        const { error: insertError } = await supabaseClient
+        // الآن، كل ما نفعله هو حفظ التوجيه في قاعدة البيانات
+        // والمُشغِّل (Trigger) الذي أنشأناه سيتولى الباقي تلقائياً
+        const { error } = await supabaseClient
             .from('directives')
             .insert({ sender_id: currentUser.id, recipient_id: recipientId, content: content });
 
-        if (insertError) throw insertError;
+        if (error) throw error;
 
         alert('تم إرسال التوجيه بنجاح.');
         document.getElementById('send-directive-modal').classList.add('hidden');
         if (currentUser.role === 'ادارة العمليات') loadOpsDirectivesHistory();
         if (currentUser.role === 'مشرف') loadSupervisorDirectivesHistory();
-
-        // --- الخطوة 2: محاولة إرسال الإشعار مع التتبع ---
-        console.log(`محاولة إرسال إشعار للمستلم رقم: ${recipientId}`);
-
-        const { data: recipient, error: fetchError } = await supabaseClient
-            .from('users')
-            .select('push_subscription')
-            .eq('id', recipientId)
-            .single();
-
-        if (fetchError) {
-            // إذا لم يتم العثور على المستخدم، أوقف العملية وأبلغ بالخطأ
-            throw new Error(`حدث خطأ أثناء جلب بيانات المستلم: ${fetchError.message}`);
-        }
-
-        console.log("بيانات المستلم التي تم جلبها من قاعدة البيانات:", recipient);
-
-        if (recipient && recipient.push_subscription) {
-            console.log("تم العثور على اشتراك! جاري تحضير الإشعار...");
-            
-            const payload = {
-                title: `توجيه جديد من: ${currentUser.name}`,
-                body: content.substring(0, 100),
-                url: '/#page-my-directives' 
-            };
-
-            const { error: pushError } = await supabaseClient.functions.invoke('push-trigger', {
-                body: { subscription: recipient.push_subscription, payload: payload }
-            });
-
-            if (pushError) {
-                console.error("فشل إرسال الإشعار:", pushError);
-            } else {
-                console.log("تم إرسال طلب الإشعار بنجاح.");
-            }
-        } else {
-            console.error("خطأ فادح: لم يتم العثور على اشتراك إشعارات لهذا المستخدم.");
-            alert("تنبيه: تم إرسال التوجيه بنجاح، ولكن لم يتم إرسال إشعار. تأكد من أن الحارس قد قام بتفعيل الإشعارات بالضغط على الجرس 🔔 من جهازه على رابط Netlify.");
-        }
 
     } catch (error) {
         alert('حدث خطأ أثناء إرسال التوجيه: ' + error.message);
