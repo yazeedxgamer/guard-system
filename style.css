@@ -1870,3 +1870,25 @@ th {
         gap: 15px;
     }
 }
+/* إظهار زر الخروج الجديد في الجوال فقط */
+#logout-btn-mobile {
+    display: none; /* إخفاؤه افتراضياً على الشاشات الكبيرة */
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 992px) {
+    /* إظهار زر الخروج في الهيدر للجوال */
+    #logout-btn-mobile {
+        display: inline-flex;
+    }
+
+    /* إخفاء زر الخروج القديم الذي في القائمة الجانبية */
+    .sidebar-footer {
+        display: none;
+    }
+}
+#enable-notifications-btn {
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+}
