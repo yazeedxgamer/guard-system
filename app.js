@@ -1271,43 +1271,57 @@ async function loadHrOpsHiringPage() {
 }
 // نهاية الاستبدال
 
-// --- دالة للاستماع المباشر للتوجيهات وإظهار إشعار ---
-function initializeRealtimeNotifications(userId) {
-  // التأكد من إيقاف أي استماع قديم
-  //supabaseClient.removeAllChannels();
+// --- بداية كود التحقق الدوري عن التوجيهات ---
 
-  const channel = supabaseClient
-    .channel(`directives-for-${userId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'directives',
-        filter: `recipient_id=eq.${userId}`,
-      },
-      (payload) => {
-        console.log('New directive received via Realtime!', payload.new);
+let directivePollingInterval = null; // متغير لتخزين عملية التحقق
+const notifiedDirectiveIds = new Set(); // لتخزين التوجيهات التي تم التنبيه عنها
 
-        Notification.requestPermission().then((permission) => {
-          if (permission === 'granted') {
-            const directive = payload.new;
-            const notificationTitle = 'لديك توجيه جديد من الإدارة';
-            const notificationOptions = {
-              body: directive.content.substring(0, 100),
-              icon: 'icon-192.png',
-            };
-            new Notification(notificationTitle, notificationOptions);
-          }
-        });
-      }
-    )
-    .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-            console.log(`Successfully subscribed to Realtime channel for user ${userId}!`);
-        }
-    });
+// دالة لإيقاف التحقق (عند تسجيل الخروج مثلاً)
+function stopPollingForDirectives() {
+    if (directivePollingInterval) {
+        clearInterval(directivePollingInterval);
+        directivePollingInterval = null;
+    }
 }
+
+// دالة لبدء التحقق الدوري
+function startPollingForDirectives(userId) {
+    stopPollingForDirectives(); // إيقاف أي عملية قديمة أولاً
+
+    directivePollingInterval = setInterval(async () => {
+        // كل 15 ثانية، اسأل عن التوجيهات الجديدة
+        const { data: newDirectives, error } = await supabaseClient
+            .from('directives')
+            .select('id, content')
+            .eq('recipient_id', userId)
+            .eq('status', 'pending'); // فقط التوجيهات التي لم يتم الرد عليها
+
+        if (error || !newDirectives) {
+            console.error("Polling error:", error);
+            return;
+        }
+
+        // المرور على كل توجيه جديد
+        for (const directive of newDirectives) {
+            // التحقق إذا لم نقم بالتنبيه عن هذا التوجيه من قبل
+            if (!notifiedDirectiveIds.has(directive.id)) {
+                
+                // إضافة هوية التوجيه للمجموعة حتى لا نبه عنه مرة أخرى
+                notifiedDirectiveIds.add(directive.id);
+
+                // طلب صلاحية الإشعار وعرضه
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    new Notification('لديك توجيه جديد من الإدارة', {
+                        body: directive.content.substring(0, 100), // عرض أول 100 حرف
+                        icon: 'icon-192.png',
+                    });
+                }
+            }
+        }
+    }, 15000); // مدة التكرار: 15000 ميلي ثانية = 15 ثانية
+}
+// --- نهاية كود التحقق الدوري ---
 
 // بداية الاستبدال
 // دالة تحميل طلبات التغطية للموارد البشرية (مع تنسيق الوقت)
@@ -5532,7 +5546,8 @@ if (loginForm) {
 
             console.log('%cنجاح! تم العثور على المستخدم:', 'color: green; font-weight: bold;', userProfile);
             currentUser = userProfile;
-            initializeRealtimeNotifications(userProfile.id);
+            startPollingForDirectives(userProfile.id);
+            
 
             // حفظ الجلسة الحقيقية (Supabase يقوم بذلك تلقائياً)
             // لم نعد بحاجة لـ sessionStorage
