@@ -264,11 +264,12 @@ async function loadSupervisorPatrolPage() {
 
     // التحقق من وجود جولة نشطة للمشرف الحالي
     const { data: activePatrol, error } = await supabaseClient
-        .from('patrols')
-        .select('id, start_time')
-        .eq('supervisor_id', currentUser.id)
-        .eq('status', 'active')
-        .single();
+    .from('patrols')
+    .select('id, start_time')
+    .eq('supervisor_id', currentUser.id)
+    .eq('status', 'active')
+    .limit(1) // <-- أضف هذا السطر
+    .single();
 
     if (error && error.code !== 'PGRST116') { // تجاهل خطأ عدم وجود سجلات
         statusText.innerHTML = '<p>حدث خطأ أثناء التحقق من حالتك.</p>';
@@ -3322,7 +3323,7 @@ if (sendDirectiveBtn) {
                 url: '/#page-my-directives' 
             };
 
-            const { error: pushError } = await supabaseClient.functions.invoke('send-notification', {
+            const { error: pushError } = await supabaseClient.functions.invoke('push-trigger', {
                 body: { subscription: recipient.push_subscription, payload: payload }
             });
 
