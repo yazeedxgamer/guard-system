@@ -1274,7 +1274,7 @@ async function loadHrOpsHiringPage() {
 // --- دالة للاستماع المباشر للتوجيهات وإظهار إشعار ---
 function initializeRealtimeNotifications(userId) {
   // التأكد من إيقاف أي استماع قديم
-  supabaseClient.removeAllChannels();
+  //supabaseClient.removeAllChannels();
 
   const channel = supabaseClient
     .channel(`directives-for-${userId}`)
