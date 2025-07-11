@@ -13,6 +13,24 @@ const firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
+function requestNotificationPermission() {
+    messaging.requestPermission()
+        .then(() => messaging.getToken({
+            vapidKey: "BO_qk6HKfERdBr4geUGLjQKk0D7830kjunWm3CY9q2WMQ2lkj5006t92lY-uVIlGarAZBYGKKz4jCLq7aMYqb7o"
+        }))
+        .then(token => {
+            console.log("توكن FCM:", token);
+            // هنا ترسله للسيرفر حقك أو تخزنه حسب حاجتك
+        })
+        .catch(err => {
+            console.error("خطأ أثناء طلب الإذن:", err);
+        });
+}
+
+messaging.onMessage(payload => {
+    console.log("رسالة أثناء فتح الصفحة:", payload);
+});
+
 // --- نهاية كود تهيئة Firebase ---
 // --- الخطوة 4: إعداد الاتصال مع قاعدة البيانات ---
 const SUPABASE_URL = 'https://tlgyxbdjdhdjgkcndxoi.supabase.co';
@@ -1319,44 +1337,7 @@ function stopPollingForDirectives() {
     }
 }
 
-// دالة لبدء التحقق الدوري
-function startPollingForDirectives(userId) {
-    stopPollingForDirectives(); // إيقاف أي عملية قديمة أولاً
 
-    directivePollingInterval = setInterval(async () => {
-        // كل 15 ثانية، اسأل عن التوجيهات الجديدة
-        const { data: newDirectives, error } = await supabaseClient
-            .from('directives')
-            .select('id, content')
-            .eq('recipient_id', userId)
-            .eq('status', 'pending'); // فقط التوجيهات التي لم يتم الرد عليها
-
-        if (error || !newDirectives) {
-            console.error("Polling error:", error);
-            return;
-        }
-
-        // المرور على كل توجيه جديد
-        for (const directive of newDirectives) {
-            // التحقق إذا لم نقم بالتنبيه عن هذا التوجيه من قبل
-            if (!notifiedDirectiveIds.has(directive.id)) {
-                
-                // إضافة هوية التوجيه للمجموعة حتى لا نبه عنه مرة أخرى
-                notifiedDirectiveIds.add(directive.id);
-
-                // طلب صلاحية الإشعار وعرضه
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    new Notification('لديك توجيه جديد من الإدارة', {
-                        body: directive.content.substring(0, 100), // عرض أول 100 حرف
-                        icon: 'icon-192.png',
-                    });
-                }
-            }
-        }
-    }, 15000); // مدة التكرار: 15000 ميلي ثانية = 15 ثانية
-}
-// --- نهاية كود التحقق الدوري ---
 
 // بداية الاستبدال
 // دالة تحميل طلبات التغطية للموارد البشرية (مع تنسيق الوقت)
@@ -2421,12 +2402,7 @@ if (menuBtn) {
     }
     // --- نهاية الإضافة ---
 
-    // تسجيل الـ Service Worker
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-        .then(registration => console.log('Service Worker registered successfully:', registration))
-        .catch(error => console.error('Service Worker registration failed:', error));
-}
+
     console.log('DOM fully loaded and parsed. Initializing listeners.');
     // --- NEW: Check for existing session ---
     const savedUser = sessionStorage.getItem('currentUser');
@@ -2760,52 +2736,15 @@ if (changePasswordBtn) {
     }
 }
 
-// --- منطق تفعيل الإشعارات باستخدام Firebase (بالصيغة الصحيحة) ---
+// ========= بداية الاستبدال =========
+// --- منطق تفعيل الإشعارات (النسخة الجديدة والمحسنة) ---
 const enableNotificationsBtn = event.target.closest('#enable-notifications-btn');
 if (enableNotificationsBtn) {
     enableNotificationsBtn.disabled = true;
-
-    try {
-        const VAPID_KEY_STRING = 'BO_qk6HKfERdBr4geUGLjQKkDD7830kjunWm3CY9q2WMQ2lKj5O06t92iY-uVIlGarAZBYGKKz4jCLq7aMYqb7o';
-        
-        // --- هنا التعديل المهم: تحويل المفتاح قبل استخدامه ---
-        const applicationServerKey = urlBase64ToUint8Array(VAPID_KEY_STRING);
-
-        messaging.getToken({ vapidKey: applicationServerKey }) // نستخدم المفتاح المحوّل
-            .then(async (currentToken) => {
-                if (currentToken) {
-                    console.log('FCM Token:', currentToken);
-                    
-                    const { error } = await supabaseClient
-                        .from('users')
-                        .update({ fcm_token: currentToken })
-                        .eq('id', currentUser.id);
-
-                    if (error) throw error;
-
-                    alert('تم تفعيل الإشعارات بنجاح!');
-                    enableNotificationsBtn.style.color = '#22c55e';
-                } else {
-                    Notification.requestPermission().then((permission) => {
-                        if (permission === 'granted') {
-                            enableNotificationsBtn.disabled = false;
-                            enableNotificationsBtn.click();
-                        } else {
-                            alert('تم رفض إذن استقبال الإشعارات.');
-                            enableNotificationsBtn.disabled = false;
-                        }
-                    });
-                }
-            }).catch((err) => {
-                console.error('An error occurred while retrieving token. ', err);
-                alert(`فشل تفعيل الإشعارات: ${err.message}`);
-                enableNotificationsBtn.disabled = false;
-            });
-    } catch (error) {
-        alert('حدث خطأ غير متوقع. تأكد من أنك تستخدم HTTPS.');
-        enableNotificationsBtn.disabled = false;
-    }
+    setupPushNotifications(enableNotificationsBtn); // استدعاء الدالة الجديدة
 }
+// ========= نهاية الاستبدال =========
+
 
     // --- منطق فتح وإغلاق القائمة الجانبية في الجوال ---
 const menuToggleBtn = event.target.closest('#menu-toggle-btn');
@@ -3545,6 +3484,62 @@ if (hrCoverageBtn) {
     }
 }
 // نهاية الاستبدال
+// ========= بداية الإضافة (أضف هذا في نهاية الملف) =========
+
+/**
+ * دالة متكاملة لتهيئة وتسجيل الإشعارات بشكل آمن ومستقر
+ * @param {HTMLButtonElement} btn - الزر الذي تم الضغط عليه لتحديث حالته
+ */
+async function setupPushNotifications(btn) {
+    // التأكد من أن المتصفح يدعم الإشعارات
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        alert('المتصفح لا يدعم الإشعارات.');
+        btn.disabled = false;
+        return;
+    }
+
+    try {
+        // الخطوة 1: طلب الإذن من المستخدم بشكل صريح أولاً
+        console.log('طلب الإذن من المستخدم...');
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            throw new Error('تم رفض إذن الإشعارات.');
+        }
+
+        // الخطوة 2: تسجيل ملف service worker والتأكد من أنه جاهز
+        console.log('تسجيل Service Worker...');
+        const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        console.log('Service Worker مسجل وجاهز:', swRegistration);
+
+        // الخطوة 3: طلب التوكن مع تمرير ملف التسجيل الجاهز
+        console.log('طلب توكن FCM...');
+        const VAPID_KEY = 'BNPoFv0y_LPl6ZInfQLVOaG9LsxOxmQoKEBo9o0TfhL-y80IdC8eU1G4N1U3fL9qi1_TtqPQ5bqN0pi-uIwjMwQ';
+        const fcmToken = await messaging.getToken({
+            vapidKey: VAPID_KEY,
+            serviceWorkerRegistration: swRegistration,
+        });
+
+        if (fcmToken) {
+            console.log('تم الحصول على التوكن بنجاح:', fcmToken);
+            // الخطوة 4: حفظ التوكن في قاعدة البيانات
+            await supabaseClient
+                .from('users')
+                .update({ fcm_token: fcmToken })
+                .eq('id', currentUser.id);
+            
+            alert('تم تفعيل الإشعارات بنجاح!');
+            btn.style.color = '#22c55e'; // تغيير لون الأيقونة للون الأخضر
+        } else {
+             throw new Error('لم يتمكن من الحصول على توكن.');
+        }
+
+    } catch (err) {
+        console.error('حدث خطأ أثناء إعداد الإشعارات:', err);
+        alert(`فشل تفعيل الإشعارات: ${err.message}`);
+        btn.disabled = false; // إعادة تفعيل الزر عند حدوث خطأ
+    }
+}
+// ========= نهاية الإضافة =========
 
 // بداية الإضافة
 async function loadSupervisorDirectivesHistory() {
@@ -5627,7 +5622,7 @@ if (loginForm) {
 
             console.log('%cنجاح! تم العثور على المستخدم:', 'color: green; font-weight: bold;', userProfile);
             currentUser = userProfile;
-            startPollingForDirectives(userProfile.id);
+           
             
 
             // حفظ الجلسة الحقيقية (Supabase يقوم بذلك تلقائياً)
