@@ -11,6 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.42.0"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -72,6 +74,7 @@
         <li data-role="مشرف,حارس أمن"><a href="#" data-page="page-my-directives"><i class="ph-fill ph-bell-ringing"></i><span>التوجيهات الواردة</span></a></li>
         <li data-role="حارس أمن"><a href="#" data-page="page-my-schedule"><i class="ph-fill ph-calendar"></i><span>جدولي</span></a></li>
         <li data-role="مشرف"><a href="#" data-page="page-my-visits"><i class="ph-fill ph-car"></i><span>الزيارات الميدانية</span></a></li>
+        <li data-role="all"><a href="#" data-page="page-my-profile"><i class="ph-fill ph-user-gear"></i><span>ملفي الشخصي</span></a></li>
     </ul>
 </nav>
             <div class="sidebar-footer">
@@ -489,6 +492,25 @@
     </div>
     <div id="hr-ops-hiring-container">
         </div>
+</div>
+<div id="page-my-profile" class="page-content hidden">
+    <div class="page-header">
+        <h3>ملفي الشخصي وإعدادات الحساب</h3>
+    </div>
+    <div class="attendance-card" style="max-width: 600px; margin: 0;">
+        <h4>تغيير كلمة المرور</h4>
+        <div class="form-group">
+            <label for="new-password">كلمة المرور الجديدة</label>
+            <input type="password" id="new-password" placeholder="يجب أن تكون 6 أحرف على الأقل">
+        </div>
+        <div class="form-group">
+            <label for="confirm-new-password">تأكيد كلمة المرور الجديدة</label>
+            <input type="password" id="confirm-new-password">
+        </div>
+        <div style="text-align: left; margin-top: 20px;">
+            <button id="change-password-btn" class="btn btn-primary">تحديث كلمة المرور</button>
+        </div>
+    </div>
 </div>
 </div> </main>
 
