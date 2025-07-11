@@ -1892,3 +1892,64 @@ th {
     font-size: 1.5rem;
     color: var(--text-secondary);
 }
+/* ======================================= */
+/* ===   تحسينات واجهة الجوال (PWA)   === */
+/* ======================================= */
+
+/* استهداف الشاشات الأصغر من 768 بكسل (معظم الجوالات) */
+@media (max-width: 768px) {
+
+    /* تقليل الحشو العام لإعطاء مساحة أكبر للمحتوى */
+    .content-area {
+        padding: 20px;
+    }
+
+    /* تعديل الهيدر ليصبح أنظف في الجوال */
+    .main-header {
+        padding: 10px 15px;
+        gap: 10px;
+    }
+    
+    /* إخفاء عنوان الصفحة النصي الكبير في الجوال لتوفير المساحة */
+    .main-header h2 {
+        display: none;
+    }
+    
+    /* إخفاء اسم المستخدم في الهيدر والإبقاء على الأيقونات فقط */
+    .user-profile span {
+        display: none;
+    }
+    .user-profile i {
+        font-size: 2.2rem;
+        margin-right: 0;
+    }
+
+    /* جعل النماذج تظهر بعمود واحد بدلاً من عمودين لتسهيل التعبئة */
+    .form-grid,
+    .hiring-layout-grid,
+    .request-meta-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* تعديل حجم الخطوط الرئيسية لتناسب الشاشة الصغيرة */
+    .page-header h3, .main-header h2 {
+        font-size: 1.4rem;
+    }
+    .card-statistic h3 {
+        font-size: 1.8rem;
+    }
+    .modal-header h4 {
+        font-size: 1.2rem;
+    }
+    
+    /* التأكد من أن بطاقات المراجعة تأخذ كامل العرض */
+    #all-requests-container {
+        grid-template-columns: 1fr;
+    }
+    
+    /* تصغير حجم أزرار الإجراءات في الجداول */
+    .btn-action {
+        padding: 2px;
+        font-size: 1.1rem;
+    }
+}
