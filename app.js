@@ -1,3 +1,19 @@
+// --- بداية كود تهيئة Firebase ---
+// استخدام الإعدادات التي قمت بتزويدي بها
+const firebaseConfig = {
+  apiKey: "AIzaSyCXscXexb0bvKEeJ9QKxnrhlB70F0ej7fs",
+  authDomain: "arkanat-287ff.firebaseapp.com",
+  projectId: "arkanat-287ff",
+  storageBucket: "arkanat-287ff.appspot.com",
+  messagingSenderId: "773019407626",
+  appId: "1:773019407626:web:3b534f6c26c970693b16f3",
+  measurementId: "G-81PYGC42FX"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
+// --- نهاية كود تهيئة Firebase ---
 // --- الخطوة 4: إعداد الاتصال مع قاعدة البيانات ---
 const SUPABASE_URL = 'https://tlgyxbdjdhdjgkcndxoi.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZ3l4YmRqZGhkamdrY25keG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwOTU4NzMsImV4cCI6MjA2NTY3MTg3M30.fX6ek2_xIdSzu_71cmsXWweZXP6cSeFlv8NTlVFKzZg';
@@ -425,7 +441,11 @@ function createLocationGroupHtml(location = {}) {
 }
 // نهاية الاستبدال
 
-
+function loadMyProfilePage() {
+    // هذه الدالة فارغة حالياً لأن الصفحة لا تحتاج لتحميل أي بيانات ديناميكية
+    // يمكننا إضافة منطق لها في المستقبل إذا احتجنا لذلك
+    console.log("My Profile page loaded.");
+}
 
 // ===================== نهاية الإضافة =====================
 // بداية الاستبدال
@@ -478,13 +498,13 @@ function updateUIVisibility(role) {
     allMenuItems.forEach(item => {
         const allowedRoles = item.dataset.role ? item.dataset.role.split(',') : [];
 
-        if (allowedRoles.includes('all') || allowedRoles.includes(role)) {
+        // التعديل هنا: تحقق إذا كانت القائمة تحتوي على الدور الحالي أو تحتوي على 'all'
+        if (allowedRoles.includes(role) || allowedRoles.includes('all')) {
             item.style.display = 'block';
         } else {
             item.style.display = 'none';
         }
     });
-    // لاحقاً سنضيف هنا إظهار أول قائمة متاحة للمستخدم بشكل تلقائي
 }
 // --- الخطوة 8: دالة لجلب وعرض المستخدمين ---
 async function fetchUsers() {
@@ -2481,6 +2501,7 @@ navLinks.forEach(link => {
         if (targetPageId === 'page-ops-nominees') loadOpsNomineesPage();
         if (targetPageId === 'page-hr-ops-hiring') loadHrOpsHiringPage();
         if (targetPageId === 'page-operations-requests') loadOperationsRequestsPage();
+        if (targetPageId === 'page-my-profile') loadMyProfilePage();
     if (targetPageId === 'page-leave-requests') loadLeaveRequests();
 if (targetPageId === 'page-resignation-requests') loadResignationRequests();
 if (targetPageId === 'page-loan-requests') loadLoanRequests();
@@ -2686,44 +2707,89 @@ if (event.target.id === 'coverage-link-vacancy') {
 // --- 3. Master Click Handler for the entire application ---
 document.body.addEventListener('click', async function(event) {
 
-    // --- منطق تفعيل الإشعارات ---
-const enableNotificationsBtn = event.target.closest('#enable-notifications-btn');
-if (enableNotificationsBtn) {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        return alert('عذراً، متصفحك لا يدعم خاصية الإشعارات.');
+    // --- منطق تغيير كلمة المرور ---
+const changePasswordBtn = event.target.closest('#change-password-btn');
+if (changePasswordBtn) {
+    const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-new-password').value;
+
+    // التحقق من صحة المدخلات
+    if (!newPassword || newPassword.length < 6) {
+        return alert('كلمة المرور الجديدة يجب أن لا تقل عن 6 أحرف.');
+    }
+    if (newPassword !== confirmPassword) {
+        return alert('كلمتا المرور غير متطابقتين.');
     }
 
+    changePasswordBtn.disabled = true;
+    changePasswordBtn.textContent = 'جاري التحديث...';
+
     try {
-        // طلب الإذن من المستخدم
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') {
-            throw new Error('تم رفض إذن استقبال الإشعارات.');
-        }
-
-        // استخدام المفتاح العام الذي أنشأته
-        const VAPID_PUBLIC_KEY = 'BEy1ctyS_rHMukVdltBXaYmtMXj15wVl7rBTZ-EvachLhqWNz27mZo-NmYiaMa8iIzq_uTPju5CBRYO7TMy7CDU';
-        
-        const serviceWorkerRegistration = await navigator.serviceWorker.ready;
-        const subscription = await serviceWorkerRegistration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: VAPID_PUBLIC_KEY
+        // استخدام الدالة الرسمية من Supabase لتحديث كلمة مرور المستخدم الحالي
+        const { data, error } = await supabaseClient.auth.updateUser({
+            password: newPassword
         });
-
-        // حفظ بيانات الاشتراك في قاعدة البيانات للمستخدم الحالي
-        const { error } = await supabaseClient
-            .from('users')
-            .update({ push_subscription: subscription })
-            .eq('id', currentUser.id);
 
         if (error) throw error;
 
-        alert('تم تفعيل الإشعارات لهذا الجهاز بنجاح!');
-        enableNotificationsBtn.style.color = '#22c55e'; // تلوين الأيقونة بالأخضر لتأكيد التفعيل
+        alert('تم تحديث كلمة المرور بنجاح!');
+        // إفراغ الحقول بعد النجاح
+        document.getElementById('new-password').value = '';
+        document.getElementById('confirm-new-password').value = '';
 
     } catch (error) {
-        console.error('Failed to subscribe to push notifications:', error);
-        alert(`فشل تفعيل الإشعارات: ${error.message}`);
+        alert(`حدث خطأ أثناء تحديث كلمة المرور: ${error.message}`);
+    } finally {
+        changePasswordBtn.disabled = false;
+        changePasswordBtn.textContent = 'تحديث كلمة المرور';
     }
+}
+
+// --- منطق تفعيل الإشعارات باستخدام Firebase (مع المفتاح الصحيح) ---
+const enableNotificationsBtn = event.target.closest('#enable-notifications-btn');
+if (enableNotificationsBtn) {
+    enableNotificationsBtn.disabled = true;
+
+    // تم وضع المفتاح الذي أرسلته مباشرة في الكود
+    const VAPID_KEY_FROM_FIREBASE = 'BO_qk6HKfERdBr4geUGLjQKkDD7830kjunWm3CY9q2WMQ2lKj5O06t92iY-uVIlGarAZBYGKKz4jCLq7aMYqb7o';
+
+    messaging.getToken({ vapidKey: VAPID_KEY_FROM_FIREBASE })
+        .then(async (currentToken) => {
+            if (currentToken) {
+                console.log('FCM Token:', currentToken);
+
+                // حفظ التوكن الجديد في جدول المستخدمين
+                const { error } = await supabaseClient
+                    .from('users')
+                    .update({ fcm_token: currentToken })
+                    .eq('id', currentUser.id);
+
+                if (error) {
+                    throw new Error('فشل حفظ التوكن في قاعدة البيانات: ' + error.message);
+                }
+
+                alert('تم تفعيل الإشعارات بنجاح!');
+                enableNotificationsBtn.style.color = '#22c55e';
+            } else {
+                // هذا الجزء يعمل إذا كان المستخدم لم يعط الصلاحية بعد
+                console.log('No registration token available. Requesting permission...');
+                Notification.requestPermission().then((permission) => {
+                    if (permission === 'granted') {
+                        console.log('Notification permission granted.');
+                        // حاول الحصول على التوكن مرة أخرى بعد أخذ الموافقة
+                        enableNotificationsBtn.disabled = false;
+                        enableNotificationsBtn.click();
+                    } else {
+                        alert('تم رفض إذن استقبال الإشعارات. لا يمكن المتابعة.');
+                        enableNotificationsBtn.disabled = false;
+                    }
+                });
+            }
+        }).catch((err) => {
+            console.error('An error occurred while retrieving token: ', err);
+            alert(`فشل تفعيل الإشعارات: ${err.message}`);
+            enableNotificationsBtn.disabled = false;
+        });
 }
 
     // --- منطق فتح وإغلاق القائمة الجانبية في الجوال ---
