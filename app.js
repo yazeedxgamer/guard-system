@@ -18,6 +18,21 @@ const messaging = firebase.messaging();
 const SUPABASE_URL = 'https://tlgyxbdjdhdjgkcndxoi.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZ3l4YmRqZGhkamdrY25keG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwOTU4NzMsImV4cCI6MjA2NTY3MTg3M30.fX6ek2_xIdSzu_71cmsXWweZXP6cSeFlv8NTlVFKzZg';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// --- دالة مساعدة لتحويل مفتاح VAPID إلى الصيغة المطلوبة ---
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
 let currentUser = null; // متغير لتخزين معلومات المستخدم الذي سجل دخوله
 let locationWatcherId = null; // متغير لتخزين معرّف عملية تتبع الموقع
 let guardMarkers = new Map(); // متغير لتخزين علامات الحراس على الخريطة
@@ -2745,51 +2760,51 @@ if (changePasswordBtn) {
     }
 }
 
-// --- منطق تفعيل الإشعارات باستخدام Firebase (مع المفتاح الصحيح) ---
+// --- منطق تفعيل الإشعارات باستخدام Firebase (بالصيغة الصحيحة) ---
 const enableNotificationsBtn = event.target.closest('#enable-notifications-btn');
 if (enableNotificationsBtn) {
     enableNotificationsBtn.disabled = true;
 
-    // تم وضع المفتاح الذي أرسلته مباشرة في الكود
-    const VAPID_KEY_FROM_FIREBASE = 'BO_qk6HKfERdBr4geUGLjQKkDD7830kjunWm3CY9q2WMQ2lKj5O06t92iY-uVIlGarAZBYGKKz4jCLq7aMYqb7o';
+    try {
+        const VAPID_KEY_STRING = 'BO_qk6HKfERdBr4geUGLjQKkDD7830kjunWm3CY9q2WMQ2lKj5O06t92iY-uVIlGarAZBYGKKz4jCLq7aMYqb7o';
+        
+        // --- هنا التعديل المهم: تحويل المفتاح قبل استخدامه ---
+        const applicationServerKey = urlBase64ToUint8Array(VAPID_KEY_STRING);
 
-    messaging.getToken({ vapidKey: VAPID_KEY_FROM_FIREBASE })
-        .then(async (currentToken) => {
-            if (currentToken) {
-                console.log('FCM Token:', currentToken);
+        messaging.getToken({ vapidKey: applicationServerKey }) // نستخدم المفتاح المحوّل
+            .then(async (currentToken) => {
+                if (currentToken) {
+                    console.log('FCM Token:', currentToken);
+                    
+                    const { error } = await supabaseClient
+                        .from('users')
+                        .update({ fcm_token: currentToken })
+                        .eq('id', currentUser.id);
 
-                // حفظ التوكن الجديد في جدول المستخدمين
-                const { error } = await supabaseClient
-                    .from('users')
-                    .update({ fcm_token: currentToken })
-                    .eq('id', currentUser.id);
+                    if (error) throw error;
 
-                if (error) {
-                    throw new Error('فشل حفظ التوكن في قاعدة البيانات: ' + error.message);
+                    alert('تم تفعيل الإشعارات بنجاح!');
+                    enableNotificationsBtn.style.color = '#22c55e';
+                } else {
+                    Notification.requestPermission().then((permission) => {
+                        if (permission === 'granted') {
+                            enableNotificationsBtn.disabled = false;
+                            enableNotificationsBtn.click();
+                        } else {
+                            alert('تم رفض إذن استقبال الإشعارات.');
+                            enableNotificationsBtn.disabled = false;
+                        }
+                    });
                 }
-
-                alert('تم تفعيل الإشعارات بنجاح!');
-                enableNotificationsBtn.style.color = '#22c55e';
-            } else {
-                // هذا الجزء يعمل إذا كان المستخدم لم يعط الصلاحية بعد
-                console.log('No registration token available. Requesting permission...');
-                Notification.requestPermission().then((permission) => {
-                    if (permission === 'granted') {
-                        console.log('Notification permission granted.');
-                        // حاول الحصول على التوكن مرة أخرى بعد أخذ الموافقة
-                        enableNotificationsBtn.disabled = false;
-                        enableNotificationsBtn.click();
-                    } else {
-                        alert('تم رفض إذن استقبال الإشعارات. لا يمكن المتابعة.');
-                        enableNotificationsBtn.disabled = false;
-                    }
-                });
-            }
-        }).catch((err) => {
-            console.error('An error occurred while retrieving token: ', err);
-            alert(`فشل تفعيل الإشعارات: ${err.message}`);
-            enableNotificationsBtn.disabled = false;
-        });
+            }).catch((err) => {
+                console.error('An error occurred while retrieving token. ', err);
+                alert(`فشل تفعيل الإشعارات: ${err.message}`);
+                enableNotificationsBtn.disabled = false;
+            });
+    } catch (error) {
+        alert('حدث خطأ غير متوقع. تأكد من أنك تستخدم HTTPS.');
+        enableNotificationsBtn.disabled = false;
+    }
 }
 
     // --- منطق فتح وإغلاق القائمة الجانبية في الجوال ---
