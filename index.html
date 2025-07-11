@@ -62,6 +62,7 @@
         <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-vacancies"><i class="ph-fill ph-briefcase"></i><span>إدارة الشواغر</span></a></li>
         <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-employees"><i class="ph-fill ph-user-list"></i><span>إدارة الموظفين</span></a></li>
         <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-payroll"><i class="ph-fill ph-file-text"></i><span>مسير الرواتب</span></a></li>
+        <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-penalties"><i class="ph-fill ph-scales"></i><span>العقوبات والخصومات</span></a></li>
         <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-operations-requests"><i class="ph-fill ph-user-plus"></i><span>طلبات العمليات</span></a></li>
         <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-hr-ops-hiring"><i class="ph-fill ph-user-check"></i><span>توظيف العمليات</span></a></li>
         <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-coverage-requests"><i class="ph-fill ph-shield-plus"></i><span>طلبات التغطية</span></a></li>
@@ -279,8 +280,12 @@
     <div class="report-filters-card" style="margin-bottom: 20px;">
         <div class="filter-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
             <div class="filter-group">
-                <label for="payroll-month">اختر الشهر والسنة</label>
-                <input type="month" id="payroll-month">
+                <label for="payroll-start-date">من تاريخ</label>
+                <input type="date" id="payroll-start-date">
+            </div>
+            <div class="filter-group">
+                <label for="payroll-end-date">إلى تاريخ</label>
+                <input type="date" id="payroll-end-date">
             </div>
             <div class="filter-group">
                 <label for="payroll-project">فلترة حسب المشروع (اختياري)</label>
@@ -505,11 +510,31 @@
             <input type="password" id="new-password" placeholder="يجب أن تكون 6 أحرف على الأقل">
         </div>
         <div class="form-group">
+                    <label for="employee-start-date">تاريخ المباشرة</label>
+                    <input type="date" id="employee-start-date">
+                </div>
+        <div class="form-group">
             <label for="confirm-new-password">تأكيد كلمة المرور الجديدة</label>
             <input type="password" id="confirm-new-password">
         </div>
         <div style="text-align: left; margin-top: 20px;">
             <button id="change-password-btn" class="btn btn-primary">تحديث كلمة المرور</button>
+        </div>
+    </div>
+</div>
+<div id="page-penalties" class="page-content hidden">
+    <div class="page-header">
+        <h3>العقوبات والخصومات</h3>
+    </div>
+    <div class="table-container">
+        <div class="filter-grid" style="grid-template-columns: 1fr; padding: 20px; background-color: #f8f9fa; border-radius: 8px; margin-bottom:20px;">
+            <div class="form-group">
+                <label>بحث باسم الموظف</label>
+                <input type="text" id="penalty-employee-search" placeholder="ابحث هنا...">
+            </div>
+        </div>
+        <div id="penalties-employee-list">
+            <p style="text-align: center;">جاري تحميل قائمة الموظفين...</p>
         </div>
     </div>
 </div>
@@ -1252,5 +1277,34 @@
           });
   }
 </script>
+
+
+<div id="add-penalty-modal" class="modal-overlay hidden">
+    <div class="modal-panel" style="max-width: 550px;">
+        <div class="modal-header">
+            <h4 id="penalty-modal-title">إضافة عقوبة جديدة</h4>
+            <button class="modal-close-btn"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="penalty-user-id">
+            <div class="form-group">
+                <label for="penalty-reason">سبب العقوبة / الخصم</label>
+                <textarea id="penalty-reason" rows="4" placeholder="مثال: إتلاف ممتلكات، مخالفة تعليمات..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="penalty-amount">مبلغ الخصم (ر.س)</label>
+                <input type="number" id="penalty-amount" placeholder="مثال: 150">
+            </div>
+             <div class="form-group">
+                <label for="penalty-date">تاريخ تطبيق الخصم (سيتم الخصم في مسير هذا الشهر)</label>
+                <input type="date" id="penalty-date">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="save-penalty-btn" class="btn btn-danger">حفظ وتطبيق الخصم</button>
+            <button class="btn btn-secondary modal-close-btn">إلغاء</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
