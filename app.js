@@ -971,6 +971,41 @@ async function fetchSchedules() {
     }
 }
 // ------------------------------------
+
+
+async function loadPenaltiesPage(searchTerm = '') {
+    const container = document.getElementById('penalties-employee-list');
+    container.innerHTML = '<p style="text-align: center;">جاري تحميل الموظفين...</p>';
+
+    let query = supabaseClient.from('users').select('id, name, role, project');
+    if (searchTerm) {
+        query = query.ilike('name', `%${searchTerm}%`);
+    }
+    const { data: employees, error } = await query.order('name');
+
+    if (error) {
+        container.innerHTML = '<p style="color:red;">حدث خطأ في جلب الموظفين.</p>';
+        return;
+    }
+    if (employees.length === 0) {
+        container.innerHTML = '<p style="text-align: center;">لم يتم العثور على موظفين.</p>';
+        return;
+    }
+
+    const employeeCards = employees.map(emp => `
+        <div class="attendance-card">
+            <div>
+                <span>${emp.name}</span>
+                <p class="time">${emp.role} - ${emp.project || 'غير محدد'}</p>
+            </div>
+            <button class="btn btn-danger add-penalty-btn" data-user-id="${emp.id}" data-user-name="${emp.name}">
+                <i class="ph-bold ph-minus-circle"></i> إضافة عقوبة
+            </button>
+        </div>
+    `).join('');
+    container.innerHTML = `<div class="attendance-list">${employeeCards}</div>`;
+}
+
 // بداية الاستبدال
 async function loadOpsDirectivesHistory() {
     const container = document.getElementById('ops-history-list-container');
@@ -2059,39 +2094,48 @@ async function loadHrAttendanceLogPage(filters = {}) {
 }
 // نهاية الاستبدال
 
-// بداية الاستبدال
+// ========= بداية الاستبدال الكامل للدالة النهائية =========
 async function generatePayroll() {
     const resultsContainer = document.getElementById('payroll-results-container');
-    const monthInput = document.getElementById('payroll-month').value;
+    const startDateString = document.getElementById('payroll-start-date').value;
+    const endDateString = document.getElementById('payroll-end-date').value;
     const projectFilter = document.getElementById('payroll-project').value;
     const locationFilter = document.getElementById('payroll-location').value;
 
-    if (!monthInput) return alert('الرجاء اختيار الشهر والسنة أولاً.');
+    if (!startDateString || !endDateString) {
+        return alert('الرجاء تحديد تاريخ البداية والنهاية أولاً.');
+    }
     resultsContainer.innerHTML = '<p style="text-align: center;">جاري جلب البيانات وحساب الرواتب...</p>';
-    payrollExportData = []; // <-- إفراغ بيانات التصدير القديمة عند كل عملية جديدة
+    payrollExportData = []; 
 
     try {
-        const [year, month] = monthInput.split('-');
-        const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month, 0, 23, 59, 59);
+        const startDate = new Date(startDateString);
+        const endDate = new Date(endDateString);
+        endDate.setHours(23, 59, 59, 999);
 
-        // تعديل الاستعلام ليشمل كل بيانات الموظف التي نحتاجها
         let employeesQuery = supabaseClient
             .from('users')
-            .select(`*, job_vacancies!users_vacancy_id_fkey(*)`)
+            .select(`*, job_vacancies!users_vacancy_id_fkey(*), start_of_work_date`)
             .eq('employment_status', 'نشط')
             .not('vacancy_id', 'is', null);
 
         if (projectFilter) employeesQuery = employeesQuery.like('project', `%${projectFilter}%`);
         if (locationFilter) employeesQuery = employeesQuery.like('location', `%${locationFilter}%`);
 
-        const [ { data: employees, error: e1 }, { data: attendanceRecords, error: e2 }, { data: leaveRecords, error: e3 } ] = await Promise.all([
+        // جلب كل البيانات المطلوبة دفعة واحدة
+        const [ 
+            { data: employees, error: e1 }, 
+            { data: attendanceRecords, error: e2 }, 
+            { data: leaveRecords, error: e3 },
+            { data: penalties, error: e4 } // <-- جلب العقوبات
+        ] = await Promise.all([
             employeesQuery,
             supabaseClient.from('attendance').select('guard_id, created_at').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
-            supabaseClient.from('employee_requests').select('user_id, details->>start_date, details->>days').eq('request_type', 'leave').eq('status', 'مقبول')
+            supabaseClient.from('employee_requests').select('user_id, details->>start_date, details->>days').eq('request_type', 'leave').eq('status', 'مقبول'),
+            supabaseClient.from('penalties').select('user_id, amount').gte('deduction_date', startDateString).lte('deduction_date', endDateString) // <-- جلب العقوبات في نفس الفترة
         ]);
 
-        if (e1 || e2 || e3) throw (e1 || e2 || e3);
+        if (e1 || e2 || e3 || e4) throw (e1 || e2 || e3 || e4);
         
         if (employees.length === 0) {
             resultsContainer.innerHTML = '<p style="text-align: center;">لم يتم العثور على موظفين مطابقين.</p>';
@@ -2099,18 +2143,28 @@ async function generatePayroll() {
         }
         
         let tableRowsHtml = '';
+
         for (const emp of employees) {
             const vacancy = emp.job_vacancies;
-            if (!vacancy || !vacancy.schedule_details || vacancy.schedule_details.length === 0) continue;
+            if (!vacancy || !vacancy.schedule_details || !vacancy.schedule_details.length > 0) continue;
 
-            // ... (نفس حسابات الرواتب السابقة) ...
             const shift = vacancy.schedule_details[0];
-            const grossSalary = (vacancy.base_salary || 0) + (vacancy.housing_allowance || 0) + (vacancy.transport_allowance || 0) + (vacancy.other_allowances || 0);
-            const dailyRate = grossSalary / 30;
+            const fullMonthSalary = (vacancy.base_salary || 0) + (vacancy.housing_allowance || 0) + (vacancy.transport_allowance || 0) + (vacancy.other_allowances || 0);
+            
+            let grossSalary = fullMonthSalary;
+            const empStartDate = emp.start_of_work_date ? new Date(emp.start_of_work_date) : null;
+            if (empStartDate && empStartDate > startDate) {
+                const daysWorked = (endDate - empStartDate) / (1000 * 60 * 60 * 24) + 1;
+                grossSalary = (fullMonthSalary / 30) * daysWorked;
+            }
+
+            const dailyRate = fullMonthSalary / 30;
             const workHours = shift.work_hours || 8;
             const hourlyRate = dailyRate / workHours;
+            
             let absentDays = 0;
-            for (let day = new Date(startDate); day <= endDate; day.setDate(day.getDate() + 1)) {
+            const effectiveStartDate = (empStartDate && empStartDate > startDate) ? empStartDate : startDate;
+            for (let day = new Date(effectiveStartDate); day <= endDate; day.setDate(day.getDate() + 1)) {
                 const dayName = day.toLocaleDateString('en-US', { weekday: 'short' });
                 if (shift.days.includes(dayName)) {
                     const hasAttended = attendanceRecords.some(att => att.guard_id === emp.id && new Date(att.created_at).toDateString() === day.toDateString());
@@ -2119,6 +2173,7 @@ async function generatePayroll() {
                 }
             }
             const absenceDeduction = (absentDays * 2) * dailyRate;
+
             let totalLateMinutes = 0;
             const employeeAttendance = attendanceRecords.filter(att => att.guard_id === emp.id);
             for (const record of employeeAttendance) {
@@ -2127,35 +2182,37 @@ async function generatePayroll() {
                 const [hours, minutes] = shift.start_time.split(':');
                 scheduledTime.setHours(hours, minutes, 0, 0);
                 if (checkInTime > scheduledTime) {
-                    const lateMilliseconds = checkInTime - scheduledTime;
-                    totalLateMinutes += Math.floor(lateMilliseconds / 60000);
+                    totalLateMinutes += Math.floor((checkInTime - scheduledTime) / 60000);
                 }
             }
             const latenessDeduction = (totalLateMinutes / 60) * hourlyRate;
-            const netSalary = grossSalary - absenceDeduction - latenessDeduction;
 
-            // --- الإضافة المهمة: تعبئة مصفوفة التصدير ---
-            payrollExportData.push({
-                name: emp.name,
-                id_number: emp.id_number,
-                phone: emp.phone,
-                iban: emp.iban,
-                project: emp.project,
-                location: emp.location,
-                role: emp.role,
-                gross_salary: grossSalary,
-                absence_days: absentDays,
-                absence_deduction: absenceDeduction,
-                late_minutes: totalLateMinutes,
-                lateness_deduction: latenessDeduction,
-                net_salary: netSalary
-            });
+            // --- بداية إضافة منطق خصم العقوبات ---
+            const employeePenaltiesTotal = penalties
+                .filter(p => p.user_id === emp.id)
+                .reduce((total, p) => total + (p.amount || 0), 0);
+            // --- نهاية إضافة منطق خصم العقوبات ---
 
-            // بناء جدول العرض على الشاشة (لا تغيير هنا)
-            tableRowsHtml += `<tr><td>${emp.name}</td><td>${emp.project} / ${emp.location || ''}</td><td>${grossSalary.toLocaleString('ar-SA')} ر.س</td><td><strong style="color: #ef4444;">${absenceDeduction.toLocaleString('ar-SA', {maximumFractionDigits: 2})} ر.س (${absentDays} أيام)</strong></td><td><strong style="color: #f59e0b;">${latenessDeduction.toLocaleString('ar-SA', {maximumFractionDigits: 2})} ر.س (${totalLateMinutes} دقيقة)</strong></td><td><strong>${netSalary.toLocaleString('ar-SA', {maximumFractionDigits: 2})} ر.س</strong></td></tr>`;
+            const netSalary = grossSalary - absenceDeduction - latenessDeduction - employeePenaltiesTotal; // <-- تحديث المعادلة النهائية
+
+            // ... (تحديث بيانات التصدير لاحقاً إذا احتجت) ...
+
+            tableRowsHtml += `
+                <tr>
+                    <td>${emp.name}</td>
+                    <td>${grossSalary.toLocaleString('ar-SA', {maximumFractionDigits: 2})} ر.س</td>
+                    <td><strong style="color: #ef4444;">${absenceDeduction.toLocaleString('ar-SA', {maximumFractionDigits: 2})} ر.س</strong></td>
+                    <td><strong style="color: #f59e0b;">${latenessDeduction.toLocaleString('ar-SA', {maximumFractionDigits: 2})} ر.س</strong></td>
+                    <td><strong style="color: #dc3545;">${employeePenaltiesTotal.toLocaleString('ar-SA', {maximumFractionDigits: 2})} ر.س</strong></td>
+                    <td><strong>${netSalary.toLocaleString('ar-SA', {maximumFractionDigits: 2})} ر.س</strong></td>
+                </tr>`;
         }
         
-        const fullTableHtml = `<div class="table-header" style="margin-top: 20px;"><h3>مسير رواتب شهر ${month}-${year}</h3><button id="export-payroll-btn" class="btn btn-success"><i class="ph-bold ph-file-xls"></i> تصدير إلى Excel</button></div><table><thead><tr><th>الاسم</th><th>المشروع/الموقع</th><th>إجمالي الراتب</th><th>خصم الغياب</th><th>خصم التأخير</th><th>صافي المستحق</th></tr></thead><tbody>${tableRowsHtml}</tbody></table>`;
+        const fullTableHtml = `<div class="table-header" style="margin-top: 20px;"><h3>مسير رواتب من ${startDateString} إلى ${endDateString}</h3><button id="export-payroll-btn" class="btn btn-success"><i class="ph-bold ph-file-xls"></i> تصدير إلى Excel</button></div>
+            <table>
+                <thead><tr><th>الاسم</th><th>الراتب المستحق للفترة</th><th>خصم الغياب</th><th>خصم التأخير</th><th>خصومات أخرى (عقوبات)</th><th>صافي المستحق</th></tr></thead>
+                <tbody>${tableRowsHtml}</tbody>
+            </table>`;
         resultsContainer.innerHTML = fullTableHtml;
 
     } catch (err) {
@@ -2163,7 +2220,7 @@ async function generatePayroll() {
         console.error("Payroll Generation Error:", err);
     }
 }
-// نهاية الاستبدال
+// ========= نهاية الاستبدال الكامل للدالة النهائية =========
 // --- دالة جديدة لصفحة التوظيف ---
 // --- دالة مطورة لصفحة التوظيف ---
 // --- دالة صفحة التوظيف مع تفعيل السحب والإفلات والفلترة ---
@@ -2364,6 +2421,13 @@ async function fetchStatistics() {
 
 document.addEventListener('DOMContentLoaded', function() {
 
+const penaltySearchInput = document.getElementById('penalty-employee-search');
+    if(penaltySearchInput) {
+        penaltySearchInput.addEventListener('keyup', () => {
+            loadPenaltiesPage(penaltySearchInput.value);
+        });
+    }
+
     // --- إضافة أيقونة لزر القائمة في الجوال ---
 const menuBtn = document.getElementById('menu-toggle-btn');
 if (menuBtn) {
@@ -2480,6 +2544,7 @@ navLinks.forEach(link => {
         if (targetPageId === 'page-employees') loadEmployeeTabData();
         if (targetPageId === 'page-requests-review') loadRequestsReviewPage(); // <-- دالة جديدة سننشئها
         if (targetPageId === 'page-hiring') loadHiringPage();
+        if (targetPageId === 'page-penalties') loadPenaltiesPage();
         if (targetPageId === 'page-coverage-requests') loadCoverageRequestsPage();
         if (targetPageId === 'page-directives-ops') loadOpsDirectivesPage();
         if (targetPageId === 'page-my-directives') loadMyDirectivesPage();
@@ -2697,6 +2762,51 @@ if (event.target.id === 'coverage-link-vacancy') {
     // --- 3. Listener for All Body Clicks (Modals & Actions) ---
 // --- 3. Master Click Handler for the entire application ---
 document.body.addEventListener('click', async function(event) {
+
+
+// --- منطق فتح نافذة إضافة عقوبة ---
+    const addPenaltyBtn = event.target.closest('.add-penalty-btn');
+    if (addPenaltyBtn) {
+        const modal = document.getElementById('add-penalty-modal');
+        const userId = addPenaltyBtn.dataset.userId;
+        const userName = addPenaltyBtn.dataset.userName;
+
+        document.getElementById('penalty-modal-title').textContent = `إضافة عقوبة جديدة لـ: ${userName}`;
+        document.getElementById('penalty-user-id').value = userId;
+        document.getElementById('penalty-reason').value = '';
+        document.getElementById('penalty-amount').value = '';
+        document.getElementById('penalty-date').valueAsDate = new Date(); // التاريخ الافتراضي هو اليوم
+        modal.classList.remove('hidden');
+    }
+
+    // --- منطق حفظ العقوبة ---
+    const savePenaltyBtn = event.target.closest('#save-penalty-btn');
+    if (savePenaltyBtn) {
+        const penaltyData = {
+            user_id: document.getElementById('penalty-user-id').value,
+            reason: document.getElementById('penalty-reason').value,
+            amount: parseFloat(document.getElementById('penalty-amount').value) || 0,
+            deduction_date: document.getElementById('penalty-date').value
+        };
+
+        if (!penaltyData.reason || penaltyData.amount <= 0 || !penaltyData.deduction_date) {
+            return alert('الرجاء تعبئة جميع الحقول بشكل صحيح.');
+        }
+
+        savePenaltyBtn.disabled = true;
+        savePenaltyBtn.textContent = 'جاري الحفظ...';
+
+        const { error } = await supabaseClient.from('penalties').insert(penaltyData);
+        if (error) {
+            alert('حدث خطأ أثناء حفظ العقوبة: ' + error.message);
+        } else {
+            alert('تم تسجيل العقوبة بنجاح!');
+            document.getElementById('add-penalty-modal').classList.add('hidden');
+        }
+        
+        savePenaltyBtn.disabled = false;
+        savePenaltyBtn.textContent = 'حفظ وتطبيق الخصم';
+    }
 
     // --- منطق تغيير كلمة المرور ---
 const changePasswordBtn = event.target.closest('#change-password-btn');
@@ -4652,6 +4762,7 @@ if (event.target.closest('#save-employee-btn')) {
         
         const profileData = {
             name: document.getElementById('employee-name').value,
+            start_of_work_date: document.getElementById('employee-start-date').value || null, // <-- السطر الجديد
             phone: document.getElementById('employee-phone').value,
             iban: document.getElementById('employee-iban').value,
             role: document.getElementById('employee-role').value,
