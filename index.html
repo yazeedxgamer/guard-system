@@ -7,7 +7,7 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#000000">
     
-    <link rel="icon" href="/icons/icon-192.png" type="image/png">
+    <link rel="icon" href="/icon-192.png" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
@@ -506,6 +506,26 @@
     <div class="page-header">
         <h3>مراجعة التوظيفات المعتمدة من العمليات</h3>
     </div>
+    <div class="tabs">
+        <a href="#" class="tab-link active" data-tab="hr-new-reviews">
+            <i class="ph-bold ph-bell-simple-ringing"></i> مراجعات جديدة
+        </a>
+        <a href="#" class="tab-link" data-tab="hr-archive-reviews">
+            <i class="ph-bold ph-archive"></i> الأرشيف
+        </a>
+    </div>
+
+    <div id="hr-new-reviews" class="tab-content active">
+        <div id="hr-ops-hiring-new-container" class="all-requests-container" style="padding-top:20px;">
+            <p style="text-align: center;">جاري تحميل المراجعات الجديدة...</p>
+        </div>
+    </div>
+    <div id="hr-archive-reviews" class="tab-content">
+        <div id="hr-ops-hiring-archive-container" class="all-requests-container" style="padding-top:20px;">
+            <p style="text-align: center;">جاري تحميل الأرشيف...</p>
+        </div>
+    </div>
+</div>
     <div id="hr-ops-hiring-container">
         </div>
 </div>
@@ -1335,6 +1355,14 @@
             <button id="save-penalty-btn" class="btn btn-danger">حفظ وتطبيق الخصم</button>
             <button class="btn btn-secondary modal-close-btn">إلغاء</button>
         </div>
+    </div>
+</div>
+<div id="image-viewer-modal" class="modal-overlay hidden" style="z-index: 1001;">
+    <div class="modal-panel" style="background: none; box-shadow: none; padding: 0; max-width: 90vw; max-height: 90vh;">
+         <button class="modal-close-btn" style="color: white; font-size: 2rem; position: absolute; top: 15px; right: 25px; background: rgba(0,0,0,0.5); border-radius: 50%; width: 40px; height: 40px; line-height: 40px;">
+            <i class="ph-bold ph-x"></i>
+        </button>
+        <img id="zoomed-image" src="" alt="صورة مكبرة" style="max-width: 100%; max-height: 100%; object-fit: contain;">
     </div>
 </div>
 </body>
