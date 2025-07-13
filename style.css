@@ -2063,3 +2063,130 @@ body {
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
 }
+/* ================================== */
+/* === إصلاح تنسيق صفحة ملفي الشخصي === */
+/* ================================== */
+@media (max-width: 768px) {
+    #page-my-profile .attendance-card {
+        padding: 25px;
+    }
+}
+/* ============================================== */
+/* === إصلاح نهائي لنموذج تغيير كلمة المرور بالجوال === */
+/* ============================================== */
+@media (max-width: 768px) {
+    #page-my-profile .form-group label {
+        display: block; /* يجعل العنوان يأخذ سطراً كاملاً */
+        text-align: right; /* التأكد من محاذاة النص لليمين */
+        margin-bottom: 8px; /* مسافة بين العنوان والحقل */
+    }
+
+    #page-my-profile .form-group input {
+        width: 100%; /* اجعل حقل الإدخال يأخذ كامل العرض المتاح */
+    }
+}
+/* ============================================== */
+/* ===   إصلاح نهائي ومخصص لصفحة ملفي الشخصي   === */
+/* ============================================== */
+@media (max-width: 768px) {
+    /* استهداف الحاوية الرئيسية في صفحة ملفي الشخصي */
+    #page-my-profile .attendance-card {
+        display: flex;
+        flex-direction: column; /* الأهم: جعل العناصر تترتب عمودياً */
+        align-items: stretch; /* جعل العناصر تملأ العرض */
+        text-align: right; /* محاذاة كل النصوص لليمين */
+        padding: 20px;
+    }
+
+    #page-my-profile h4 {
+        width: 100%;
+        text-align: center; /* توسط العنوان */
+        margin-bottom: 25px; /* مسافة تحت العنوان */
+    }
+
+    #page-my-profile .form-group {
+        width: 100%; /* اجعل مجموعة الحقل تأخذ العرض الكامل */
+        margin-bottom: 20px;
+    }
+
+    #page-my-profile .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+
+    #page-my-profile .form-group input {
+        width: 100%;
+        padding: 12px;
+        font-size: 1rem;
+    }
+
+    /* تنسيق خاص لزر التحديث */
+    #page-my-profile .btn-primary {
+        width: 100%;
+        margin-top: 10px;
+        padding: 14px;
+    }
+}
+/* تنسيق صور المرفقات في النافذة المنبثقة */
+.attachment-image {
+    width: 100%;
+    height: auto;
+    max-height: 250px; /* تحديد ارتفاع أقصى */
+    object-fit: contain; /* للتأكد من ظهور الصورة كاملة */
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    margin-top: 10px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.attachment-image:hover {
+    opacity: 0.8;
+}
+/* ==================== بداية الإضافة: تنسيقات المرفقات ونافذة عرض الصور ==================== */
+.attachment-image {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out;
+}
+
+.attachment-image:hover {
+    transform: scale(1.05);
+}
+/* ===================== نهاية الإضافة ===================== */
+/* ==================== بداية الإضافة: تحسينات عرض الصور القابلة للتكبير ==================== */
+
+.viewable-image {
+    cursor: pointer; /* يغير شكل مؤشر الفأرة إلى يد للإشارة إلى أنها قابلة للنقر */
+    transition: transform 0.2s ease, box-shadow 0.2s ease; /* يجعل التأثيرات ناعمة */
+}
+
+.viewable-image:hover {
+    transform: scale(1.05); /* تكبير بسيط للصورة عند مرور الفأرة فوقها */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15); /* إضافة ظل خفيف لإبراز الصورة */
+}
+
+/* =================================== نهاية الإضافة =================================== */
+/* ==================== بداية الإضافة: تفعيل السكرول في نافذة المراجعة ==================== */
+
+/* نجعل الفورم يأخذ المساحة المتاحة كاملة داخل النافذة */
+#ops-review-applicant-modal #ops-review-form {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-height: 0; /* خدعة بسيطة لضمان عمل السكرول بشكل صحيح داخل Flexbox */
+}
+
+/* نجعل جسم النافذة هو الجزء الذي يتمدد ويقبل السكرول */
+#ops-review-applicant-modal .modal-body {
+    flex-grow: 1;
+    overflow-y: auto; /* هذا هو السطر الأهم الذي يضيف السكرول العمودي عند الحاجة */
+}
+
+/* =================================== نهاية الإضافة =================================== */
