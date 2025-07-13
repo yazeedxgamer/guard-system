@@ -29,6 +29,7 @@ async function fetchAndDisplayOpenShifts() {
     });
 }
 
+// بداية الكود الجديد والمُصحح
 async function fetchAndDisplayOpenJobs() {
     const container = document.getElementById('public-jobs-list');
     container.innerHTML = '<p style="text-align: center;">جاري تحميل الوظائف...</p>';
@@ -39,11 +40,29 @@ async function fetchAndDisplayOpenJobs() {
     container.innerHTML = '';
     jobs.forEach(job => {
         const totalSalary = (job.base_salary || 0) + (job.housing_allowance || 0) + (job.transport_allowance || 0) + (job.other_allowances || 0);
-        const cityName = job.city || job.location || 'غير محدد';
-        const siteName = job.specific_location || job.project;
-        container.insertAdjacentHTML('beforeend', `<div class="contract-card"><div class="contract-card-header"><h4>${job.title}</h4></div><div class="contract-card-body"><p><i class="ph-bold ph-map-pin"></i> <strong>الموقع:</strong> ${cityName} - ${siteName}</p><p><i class="ph-bold ph-money"></i> <strong>الراتب الإجمالي:</strong> ${totalSalary.toLocaleString('ar-SA')} ر.س</p></div><div class="contract-card-footer"><button class="btn btn-primary apply-for-job-btn" data-job-id="${job.id}" data-job-title="${job.title}"><i class="ph-bold ph-paper-plane-tilt"></i> قدم الآن</button></div></div>`);
+        
+        // **هنا التصحيح:** نبحث عن اسم المدينة في حقل "city" أولاً، ثم في حقل "location"
+        const cityName = job.city || job.location || 'مدينة غير محددة';
+        const locationInfo = `${cityName}${job.specific_location ? ` - ${job.specific_location}` : ''}`;
+
+        container.insertAdjacentHTML('beforeend', `
+            <div class="contract-card">
+                <div class="contract-card-header"><h4>${job.title}</h4></div>
+                <div class="contract-card-body">
+                    <p><i class="ph-bold ph-briefcase"></i> <strong>المشروع:</strong> ${job.project || 'غير محدد'}</p>
+                    <p><i class="ph-bold ph-map-pin"></i> <strong>الموقع:</strong> ${locationInfo}</p>
+                    <p><i class="ph-bold ph-money"></i> <strong>الراتب الإجمالي:</strong> ${totalSalary.toLocaleString('ar-SA')} ر.س</p>
+                </div>
+                <div class="contract-card-footer">
+                    <button class="btn btn-primary apply-for-job-btn" data-job-id="${job.id}" data-job-title="${job.title}">
+                        <i class="ph-bold ph-paper-plane-tilt"></i> قدم الآن
+                    </button>
+                </div>
+            </div>`
+        );
     });
 }
+// نهاية الكود الجديد والمُصحح
 
 document.addEventListener('click', async (event) => {
     // --- منطق النقر على التبويبات ---
