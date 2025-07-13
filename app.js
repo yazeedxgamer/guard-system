@@ -4267,17 +4267,21 @@ if (saveCoverageBtn) {
 }
 // نهاية الإضافة
 
-// بداية الاستبدال
+// بداية الكود الجديد والمُصحح
 if (event.target.id === 'export-payroll-btn') {
     if (payrollExportData && payrollExportData.length > 0) {
-        const monthInput = document.getElementById('payroll-month').value || 'report';
-        const filename = `payroll-${monthInput}.csv`;
+        // نقوم بجلب التواريخ من الحقول الصحيحة
+        const startDate = document.getElementById('payroll-start-date').value;
+        const endDate = document.getElementById('payroll-end-date').value;
+        // إنشاء اسم ملف وصفي بناءً على التواريخ
+        const filename = `payroll-from-${startDate}-to-${endDate}.csv`;
+        
         exportPayrollDataToCsv(payrollExportData, filename);
     } else {
         alert('لا توجد بيانات لتصديرها. يرجى توليد المسير أولاً.');
     }
 }
-// نهاية الاستبدال
+// نهاية الكود الجديد والمُصحح
 // نهاية الإضافة
     // بداية الإضافة
 // زر توليد مسير الرواتب
