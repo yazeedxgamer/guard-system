@@ -1953,3 +1953,113 @@ th {
         font-size: 1.1rem;
     }
 }
+/* ======================================= */
+/* === تصميم محسن لصفحة حضور الحراس === */
+/* ======================================= */
+
+.attendance-list {
+    display: grid;
+    grid-template-columns: 1fr; /* عمود واحد دائمًا لتصميم البطاقة الجديد */
+    gap: 15px;
+}
+
+.attendance-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: var(--secondary-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.07);
+    border-right: 5px solid; /* سيتم تحديد اللون بناءً على الحالة */
+    transition: all 0.2s ease-in-out;
+}
+
+.attendance-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* تحديد لون الشريط الجانبي للبطاقة بناءً على الحالة */
+.attendance-card.present { border-right-color: var(--approved-color); }
+.attendance-card.absent { border-right-color: var(--denied-color); }
+.attendance-card.off { border-right-color: var(--pending-color); }
+
+.attendance-card .time {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: normal;
+}
+
+.attendance-card > div > span { /* اسم الحارس */
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+/* تنسيق جديد للحالة ليكون أوضح */
+.attendance-card .status-text {
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    color: white;
+}
+
+.attendance-card.present .status-text { background-color: var(--approved-color); }
+.attendance-card.absent .status-text { background-color: var(--denied-color); }
+.attendance-card.off .status-text { background-color: var(--pending-color); color: var(--text-primary); }
+/* ======================================= */
+/* ===  تحسينات إضافية لواجهة الجوال   === */
+/* ======================================= */
+
+/* 1. إضافة سكرول للقائمة الجانبية عند الحاجة */
+.sidebar-nav {
+    flex-grow: 1; /* تجعل القائمة تملأ المساحة المتاحة */
+    overflow-y: auto; /* يضيف سكرول عمودي فقط اذا كانت القائمة أطول من الشاشة */
+}
+
+/* 2. تحسينات عامة لجعل المظهر أقرب للتطبيقات */
+html {
+    scroll-behavior: smooth; /* يجعل التمرير داخل الصفحة سلسًا */
+}
+
+body {
+    -webkit-tap-highlight-color: transparent; /* يزيل الوميض الرمادي عند لمس الروابط في الجوال */
+    -webkit-font-smoothing: antialiased; /* يحسن عرض الخطوط */
+    text-rendering: optimizeLegibility;
+}
+
+/* 3. تحسين مظهر البطاقات والنماذج في الجوال */
+@media (max-width: 768px) {
+    /* إضافة مسافات داخلية أفضل للبطاقات */
+    .contract-card-body, .review-request-body, .visit-details {
+        padding: 15px;
+    }
+    
+    .contract-card-header, .review-request-header {
+        padding: 12px 15px;
+    }
+
+    /* تحسين شكل حقول الإدخال */
+    .form-group input, .form-group select, .form-group textarea {
+        padding: 14px;
+        font-size: 1rem;
+        background-color: #f8f9fa;
+        border: 1px solid #e5e7eb;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    /* تغيير شكل الحقل عند التركيز عليه */
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        outline: none;
+    }
+
+    /* إضافة تأثير بسيط عند الضغط على البطاقات القابلة للضغط */
+    .request-action-card:active {
+        transform: translateY(0) scale(0.95); /* تأثير ضغط للأسفل */
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+}
