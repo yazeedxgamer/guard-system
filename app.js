@@ -120,6 +120,40 @@ function startPatrolTracking(patrolId) {
     );
 }
 // نهاية الإضافة
+
+async function loadArchivePage(requestType) {
+    const containerId = `archive-${requestType}-tab`;
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = `<p style="text-align: center; padding-top: 20px;">جاري تحميل الأرشيف...</p>`;
+    
+    const { data: requests, error } = await supabaseClient
+        .from('employee_requests')
+        .select(`*, users:user_id(name)`)
+        .eq('request_type', requestType)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        container.innerHTML = `<p style="color:red;">حدث خطأ في تحميل الأرشيف.</p>`;
+        return console.error(error);
+    }
+    if (requests.length === 0) {
+        container.innerHTML = `<p style="text-align: center;">لا توجد طلبات في الأرشيف.</p>`;
+        return;
+    }
+    // إعادة استخدام نفس تصميم بطاقات المراجعة
+    container.innerHTML = `<div class="all-requests-container" style="padding-top:20px;">${requests.map(request => {
+        const headerStatusClass = request.status === 'مقبول' ? 'status-approved' : (request.status === 'مرفوض' ? 'status-denied' : 'status-pending');
+        let detailsHtml = '';
+        if (request.details) {
+            if (request.details.days) detailsHtml += `<p><strong>المدة:</strong> ${request.details.days} أيام</p>`;
+            if (request.details.amount) detailsHtml += `<p><strong>المبلغ:</strong> ${request.details.amount} ر.س</p>`;
+            if (request.details.reason) detailsHtml += `<p><strong>السبب:</strong> ${request.details.reason}</p>`;
+        }
+        return `<div class="review-request-card"><div class="review-request-header ${headerStatusClass}"><h4>طلب من: ${request.users ? request.users.name : 'غير معروف'}</h4><span class="status-badge">${request.status}</span></div><div class="review-request-body">${detailsHtml}</div></div>`;
+    }).join('')}</div>`;
+}
+
 // بداية الاستبدال
 async function loadOpsReviewRequestsPage() {
     const container = document.getElementById('ops-review-requests-container');
@@ -188,7 +222,8 @@ async function loadOpsDirectivesPage() {
 async function loadGuardAttendancePage() {
     const container = document.getElementById('guard-attendance-container');
     container.innerHTML = '<p style="text-align: center;">جاري تحميل بيانات الفريق...</p>';
-    if (!currentUser || currentUser.role !== 'ادارة العمليات') {
+    // -- بداية التعديل: السماح للمشرفين ومدراء العمليات بالدخول --
+    if (!currentUser || !['ادارة العمليات', 'مشرف'].includes(currentUser.role)) {
         container.innerHTML = '<p>هذه الصفحة مخصصة لمدراء العمليات.</p>';
         return;
     }
@@ -236,15 +271,32 @@ async function loadGuardAttendancePage() {
                     }
                 }
             }
+            // ========= بداية الاستبدال =========
+
+            // --- إضافة: تعريف زر إرسال التوجيه ---
+            const directiveButton = `
+                <button class="btn btn-secondary btn-sm open-directive-modal-btn" 
+                        data-recipient-id="${guard.id}" 
+                        data-recipient-name="${guard.name}" 
+                        title="إرسال توجيه سريع">
+                    <i class="ph-bold ph-paper-plane-tilt"></i>
+                </button>
+            `;
+
             guardsStatusHtml += `
                 <div class="attendance-card ${status.class}">
-                    <div><span>${guard.name}</span><p class="time">${guard.project} / ${guard.location || ''}</p></div>
+                    <div>
+                        <span>${guard.name}</span>
+                        <p class="time">${guard.project} / ${guard.location || ''}</p>
+                    </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <span>${status.text}</span>
+                        <span class="status-text">${status.text}</span>
                         ${actionButton}
+                        ${directiveButton}
                     </div>
                 </div>
             `;
+            // ========= نهاية الاستبدال =========
         }
         container.innerHTML = `<div class="attendance-list">${guardsStatusHtml}</div>`;
     } catch (err) {
@@ -826,80 +878,89 @@ let markersLayer = L.layerGroup(); // طبقة لتجميع علامات الح�
 let mapSubscription = null; // متغير للتحكم في الاشتراك المباشر
 let requestsSubscription = null; // متغير لاشتراك الطلبات المباشر
 
+// ========= بداية الاستبدال الكامل للدالة =========
+let allGuardsOnMap = []; // متغير جديد لتخزين بيانات الحراس للبحث
+
 async function initializeMap() {
     // إعداد الخريطة مرة واحدة فقط
     if (!map) {
-        map = L.map('map').setView([24.7136, 46.6753], 10); // مركز الخريطة على الرياض كمثال
+        map = L.map('map').setView([24.7136, 46.6753], 10);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
     }
-
-    // التأكد من أن حجم الخريطة صحيح عند عرضها
     setTimeout(() => map.invalidateSize(), 100);
 
-    // مسح العلامات القديمة والاشتراكات السابقة عند إعادة فتح الصفحة
+    // مسح العلامات والاشتراكات القديمة
     markersLayer.clearLayers();
     guardMarkers.clear();
+    allGuardsOnMap = []; // إفراغ مصفوفة البحث
     if (mapSubscription) {
         supabaseClient.removeChannel(mapSubscription);
         mapSubscription = null;
     }
-
     markersLayer.addTo(map);
 
-    // 1. التحميل الأولي لآخر موقع معروف لكل الحراس
-    const { data: initialLocations, error: initialError } = await supabaseClient
-        .from('guard_locations')
+    // --- 1. التحميل الأولي للمواقع مع جلب بيانات أكثر ---
+    const { data: initialGuards, error: initialError } = await supabaseClient
+        .from('users')
         .select(`
-            latitude,
-            longitude,
-            guard_id,
-            users ( name ) 
-        `);
+            id, name, role, project, location, assigned_shift,
+            guard_locations!inner(latitude, longitude)
+        `)
+        .eq('role', 'حارس أمن')
+        .not('guard_locations', 'is', null);
 
     if (initialError) {
         console.error('خطأ في جلب المواقع الأولية:', initialError);
         return;
     }
+    
+    allGuardsOnMap = initialGuards; // حفظ البيانات للبحث
 
-    initialLocations.forEach(loc => {
+    initialGuards.forEach(guard => {
+        const loc = guard.guard_locations;
         if (loc.latitude && loc.longitude) {
-            const guardName = loc.users ? loc.users.name : `حارس (ID: ${loc.guard_id})`;
-            const marker = L.marker([loc.latitude, loc.longitude])
-                .bindPopup(`<b>${guardName}</b>`);
+            const shift = guard.assigned_shift ? `من ${formatTimeAMPM(guard.assigned_shift.start_time)} إلى ${formatTimeAMPM(guard.assigned_shift.end_time)}` : 'غير محددة';
+            
+            // --- 2. إنشاء النافذة المنبثقة بالمعلومات الكاملة ---
+            const popupContent = `
+                <div style="font-family: 'Cairo', sans-serif;">
+                    <h4 style="margin: 0 0 5px 0;">${guard.name}</h4>
+                    <p style="margin: 0 0 5px 0;"><strong>المشروع:</strong> ${guard.project || 'غير محدد'}</p>
+                    <p style="margin: 0 0 5px 0;"><strong>الموقع:</strong> ${guard.location || 'غير محدد'}</p>
+                    <p style="margin: 0;"><strong>الوردية:</strong> ${shift}</p>
+                </div>
+            `;
 
+            const marker = L.marker([loc.latitude, loc.longitude]).bindPopup(popupContent);
             markersLayer.addLayer(marker);
-            guardMarkers.set(loc.guard_id, marker); // حفظ العلامة باستخدام رقم الحارس
+            guardMarkers.set(guard.id, marker);
         }
     });
 
-    // 2. الاشتراك المباشر (Realtime) للاستماع للتحديثات الجديدة
-    mapSubscription = supabaseClient.channel('public:guard_location_history')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'guard_location_history' }, 
-        async (payload) => {
-            const newLocation = payload.new;
-            const guardId = newLocation.guard_id;
-
-            if (guardMarkers.has(guardId)) {
-                // إذا كان الحارس موجوداً على الخريطة، قم بتحريك علامته
-                const markerToMove = guardMarkers.get(guardId);
-                markerToMove.setLatLng([newLocation.latitude, newLocation.longitude]);
-            } else {
-                // إذا كان الحارس جديداً (لم يكن له موقع أولي)، أضف علامة جديدة له
-                // نحتاج لجلب اسم الحارس أولاً
-                const { data: guardInfo } = await supabaseClient.from('users').select('name').eq('id', guardId).single();
-                const guardName = guardInfo ? guardInfo.name : `حارس (ID: ${guardId})`;
-                const newMarker = L.marker([newLocation.latitude, newLocation.longitude])
-                    .bindPopup(`<b>${guardName}</b>`);
-
-                markersLayer.addLayer(newMarker);
-                guardMarkers.set(guardId, newMarker); // حفظ العلامة الجديدة
+    // --- 3. الاشتراك المباشر (Realtime) للاستماع للتحديثات والإضافات والحذف ---
+    mapSubscription = supabaseClient.channel('public-locations-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'guard_locations' },
+        (payload) => {
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                const newLocation = payload.new;
+                if (guardMarkers.has(newLocation.guard_id)) {
+                    const markerToMove = guardMarkers.get(newLocation.guard_id);
+                    markerToMove.setLatLng([newLocation.latitude, newLocation.longitude]);
+                }
+            } else if (payload.eventType === 'DELETE') {
+                const oldLocation = payload.old;
+                if (guardMarkers.has(oldLocation.guard_id)) {
+                    const markerToRemove = guardMarkers.get(oldLocation.guard_id);
+                    markersLayer.removeLayer(markerToRemove);
+                    guardMarkers.delete(oldLocation.guard_id);
+                }
             }
         })
         .subscribe();
 }
-// ===================== نهاية الاستبدال =====================
+// ========= نهاية الاستبدال الكامل للدالة =========
 // ------------------------------------
 // ------------------------------------
 
@@ -2020,7 +2081,7 @@ async function loadLoanRequests() {
 // نهاية الاستبدال
 
 // بداية الاستبدال
-// دالة عرض سجل الحضور بالتصميم الهرمي الجديد
+// ========= بداية الاستبدال الكامل للدالة =========
 async function loadHrAttendanceLogPage(filters = {}) {
     const container = document.getElementById('hr-attendance-accordion-container');
     container.innerHTML = '<p style="text-align: center;">جاري تحميل السجلات...</p>';
@@ -2035,6 +2096,10 @@ async function loadHrAttendanceLogPage(filters = {}) {
         if (filters.status) query = query.eq('status', filters.status);
         if (filters.dateFrom) query = query.gte('created_at', filters.dateFrom);
         if (filters.dateTo) query = query.lte('created_at', filters.dateTo);
+        // فلاتر جديدة للمشروع والموقع
+        if (filters.project) query = query.ilike('users.project', `%${filters.project}%`);
+        if (filters.location) query = query.ilike('users.location', `%${filters.location}%`);
+
 
         const { data, error } = await query;
         if (error) throw error;
@@ -2044,11 +2109,11 @@ async function loadHrAttendanceLogPage(filters = {}) {
             return;
         }
 
-        // 1. تجميع البيانات بشكل هرمي
         const groupedData = data.reduce((acc, record) => {
-            if (!record.users) return acc; // تجاهل السجلات بدون مستخدم مرتبط
-            const { region, project, location } = record.users;
-            if (!region || !project || !location) return acc;
+            if (!record.users) return acc;
+            const region = record.users.region || 'غير محدد';
+            const project = record.users.project || 'غير محدد';
+            const location = record.users.location || 'غير محدد';
 
             if (!acc[region]) acc[region] = {};
             if (!acc[region][project]) acc[region][project] = {};
@@ -2058,7 +2123,6 @@ async function loadHrAttendanceLogPage(filters = {}) {
             return acc;
         }, {});
 
-        // 2. بناء الـ HTML الهرمي
         let accordionHtml = '';
         for (const region in groupedData) {
             let projectsHtml = '';
@@ -2071,7 +2135,7 @@ async function loadHrAttendanceLogPage(filters = {}) {
                         ${records.map(r => `
                             <tr>
                                 <td>${r.users.name}</td>
-                                <td>${new Date(r.created_at).toLocaleString('ar-SA')}</td>
+                                <td>${r.created_at ? new Date(r.created_at).toLocaleString('ar-SA') : '-'}</td>
                                 <td>${r.checkout_at ? new Date(r.checkout_at).toLocaleString('ar-SA') : '-'}</td>
                                 <td><span class="status ${r.status === 'حاضر' ? 'active' : 'inactive'}">${r.status}</span></td>
                             </tr>
@@ -2092,7 +2156,9 @@ async function loadHrAttendanceLogPage(filters = {}) {
         console.error("HR Attendance Accordion Error:", err);
     }
 }
-// نهاية الاستبدال
+
+
+// ========= نهاية الاستبدال الكامل للدالة =========
 
 // ========= بداية الاستبدال الكامل للدالة النهائية =========
 async function generatePayroll() {
@@ -2559,6 +2625,7 @@ navLinks.forEach(link => {
         if (targetPageId === 'page-operations-requests') loadOperationsRequestsPage();
         if (targetPageId === 'page-my-profile') loadMyProfilePage();
     if (targetPageId === 'page-leave-requests') loadLeaveRequests();
+    if (targetPageId === 'page-requests-archive') loadArchivePage('leave');
 if (targetPageId === 'page-resignation-requests') loadResignationRequests();
 if (targetPageId === 'page-loan-requests') loadLoanRequests();
 if (targetPageId === 'page-hr-attendance-log') loadHrAttendanceLogPage();
@@ -2600,6 +2667,9 @@ if (targetPageId === 'page-payroll') {
     });
 });
 // ===================== نهاية الاستبدال =====================
+
+
+
 // بداية الاستبدال
 // منطق الملء التلقائي الذكي لجميع النماذج (شواغر وموظفين)
 document.addEventListener('change', async (event) => {
@@ -2763,6 +2833,70 @@ if (event.target.id === 'coverage-link-vacancy') {
 // --- 3. Master Click Handler for the entire application ---
 document.body.addEventListener('click', async function(event) {
 
+    // الربط بالتبويبات داخل الصفحة
+const archiveTab = event.target.closest('#page-requests-archive .tab-link');
+if (archiveTab) {
+    event.preventDefault();
+    const targetTabId = archiveTab.dataset.tab;
+    document.querySelectorAll('#page-requests-archive .tab-link').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('#page-requests-archive .tab-content').forEach(c => c.classList.remove('active'));
+    archiveTab.classList.add('active');
+    document.getElementById(targetTabId).classList.add('active');
+
+    // تحميل بيانات التبويب المطلوب
+    if (targetTabId === 'archive-leave-tab') loadArchivePage('leave');
+    if (targetTabId === 'archive-loan-tab') loadArchivePage('loan');
+    if (targetTabId === 'archive-resignation-tab') loadArchivePage('resignation');
+}
+
+// زر البحث في صفحة سجل الحضور (هذا هو المكان الصحيح له)
+    if (event.target.id === 'hr-attendance-search-btn') {
+        const filters = {
+            dateFrom: document.getElementById('hr-attendance-from').value,
+            dateTo: document.getElementById('hr-attendance-to').value,
+            status: document.getElementById('hr-attendance-status').value,
+            project: document.getElementById('hr-attendance-project').value,
+            location: document.getElementById('hr-attendance-location').value
+        };
+        // تعديل تاريخ "إلى" ليشمل اليوم كاملاً
+        if (filters.dateTo) {
+            let toDate = new Date(filters.dateTo);
+            toDate.setHours(23, 59, 59, 999);
+            filters.dateTo = toDate.toISOString();
+        }
+        loadHrAttendanceLogPage(filters);
+    }
+   
+
+    // --- بداية الإضافة: منطق البحث في الخريطة ---
+    const mapSearchBtn = event.target.closest('#map-search-btn');
+    if (mapSearchBtn) {
+        const searchTerm = document.getElementById('map-search-input').value.toLowerCase();
+        if (!searchTerm) return;
+
+        const foundGuard = allGuardsOnMap.find(g => g.name.toLowerCase().includes(searchTerm));
+        
+        if (foundGuard && guardMarkers.has(foundGuard.id)) {
+            const marker = guardMarkers.get(foundGuard.id);
+            map.setView(marker.getLatLng(), 16); // تقريب الخريطة على الحارس
+            marker.openPopup(); // فتح النافذة المنبثقة
+        } else {
+            alert('لم يتم العثور على حارس بهذا الاسم.');
+        }
+    }
+    // --- نهاية الإضافة ---
+
+    // --- بداية الإضافة: منطق فتح نافذة الإرسال للجميع ---
+const sendToAllBtn = event.target.closest('#send-to-all-guards-btn');
+if (sendToAllBtn) {
+    const modal = document.getElementById('send-directive-modal');
+    document.getElementById('send-directive-modal-title').textContent = 'إرسال توجيه لجميع الحراس';
+    // نستخدم "all" كقيمة خاصة لتمييز الإرسال الجماعي
+    document.getElementById('directive-recipient-id').value = 'all';
+    document.getElementById('directive-content').value = '';
+    modal.classList.remove('hidden');
+}
+// --- نهاية الإضافة ---
 
 // --- منطق فتح نافذة إضافة عقوبة ---
     const addPenaltyBtn = event.target.closest('.add-penalty-btn');
@@ -3454,7 +3588,7 @@ if (directiveActionBtn) {
 }
 // نهاية الاستبدال
     // بداية الإضافة: منطق إرسال التوجيه والتحكم بالتبويبات
-// --- عند الضغط على زر "إرسال" داخل نافذة التوجيه ---
+// ========= بداية الاستبدال الكامل لمنطق حفظ التوجيه =========
 const sendDirectiveBtn = event.target.closest('#send-directive-btn');
 if (sendDirectiveBtn) {
     const recipientId = document.getElementById('directive-recipient-id').value;
@@ -3466,17 +3600,43 @@ if (sendDirectiveBtn) {
     sendDirectiveBtn.textContent = 'جاري الإرسال...';
 
     try {
-        // الآن، كل ما نفعله هو حفظ التوجيه. قاعدة البيانات سترسله مباشرة للمستقبل
-        const { error } = await supabaseClient
-            .from('directives')
-            .insert({ sender_id: currentUser.id, recipient_id: recipientId, content: content });
+        if (recipientId === 'all') {
+            // --- الحالة الجديدة: الإرسال للجميع ---
+            // 1. جلب كل الحراس التابعين للمشروع الحالي
+            const { data: guards, error: guardsError } = await supabaseClient
+                .from('users')
+                .select('id')
+                .eq('project', currentUser.project)
+                .eq('role', 'حارس أمن');
 
-        if (error) throw error;
+            if (guardsError) throw guardsError;
 
-        alert('تم إرسال التوجيه بنجاح.');
+            // 2. تجهيز مصفوفة التوجيهات دفعة واحدة
+            const directives = guards.map(guard => ({
+                sender_id: currentUser.id,
+                recipient_id: guard.id,
+                content: content
+            }));
+
+            // 3. إرسال كل التوجيهات في طلب واحد
+            const { error: insertError } = await supabaseClient.from('directives').insert(directives);
+            if (insertError) throw insertError;
+
+            alert(`تم إرسال التوجيه بنجاح إلى ${guards.length} حارس.`);
+
+        } else {
+            // --- الحالة القديمة: الإرسال لفرد واحد ---
+            const { error } = await supabaseClient
+                .from('directives')
+                .insert({ sender_id: currentUser.id, recipient_id: recipientId, content: content });
+
+            if (error) throw error;
+            alert('تم إرسال التوجيه بنجاح.');
+        }
+
         document.getElementById('send-directive-modal').classList.add('hidden');
-        if (currentUser.role === 'ادارة العمليات') loadOpsDirectivesHistory();
-        if (currentUser.role === 'مشرف') loadSupervisorDirectivesHistory();
+        // يمكنك إضافة تحديث لواجهة سجل التوجيهات هنا إذا أردت
+        // if (typeof loadOpsDirectivesHistory === 'function') loadOpsDirectivesHistory();
 
     } catch (error) {
         alert('حدث خطأ أثناء إرسال التوجيه: ' + error.message);
@@ -3485,7 +3645,7 @@ if (sendDirectiveBtn) {
         sendDirectiveBtn.textContent = 'إرسال';
     }
 }
-// نهاية الاستبدال
+// ========= نهاية الاستبدال الكامل لمنطق حفظ التوجيه =========
 
 // --- منطق التنقل بين تبويبات صفحة التوجيهات ---
 const directiveTab = event.target.closest('#page-directives-ops .tab-link');
@@ -4093,91 +4253,87 @@ if (event.target.id === 'generate-payroll-btn') {
 // نهاية الإضافة
 
 // بداية الإضافة
-// زر البحث في صفحة سجل الحضور
-if (event.target.id === 'hr-attendance-search-btn') {
-    const filters = {
-        dateFrom: document.getElementById('hr-attendance-from').value,
-        dateTo: document.getElementById('hr-attendance-to').value,
-        status: document.getElementById('hr-attendance-status').value
-    };
-    
-    // تعديل تاريخ "إلى" ليشمل اليوم كاملاً
-    if (filters.dateTo) {
-        let toDate = new Date(filters.dateTo);
-        toDate.setHours(23, 59, 59, 999);
-        filters.dateTo = toDate.toISOString();
-    }
-    
-    loadHrAttendanceLogPage(filters);
-}
-// نهاية الإضافة    
+
 // بداية الاستبدال
+// ========= بداية الاستبدال الكامل لمنطق أزرار الطلبات =========
 const requestActionBtn = event.target.closest('.request-action-button');
 if (requestActionBtn) {
     event.stopPropagation();
     const btn = requestActionBtn;
     btn.disabled = true;
 
+    // قراءة البيانات من الزر
+    const action = btn.dataset.action;
+    const requestId = btn.dataset.requestId;
+    const stage = btn.dataset.approvalStage;
+    const requestType = btn.dataset.requestType;
+    const userId = btn.dataset.userId;
+    const vacancyId = btn.dataset.vacancyId;
+
+    console.log('Action:', action, 'Request ID:', requestId, 'Stage:', stage, 'Type:', requestType);
+
     try {
-        const action = btn.dataset.action;
-        const requestId = btn.dataset.requestId;
-        const stage = btn.dataset.approvalStage;
+        let updateData = {};
+        let successMessage = '';
 
         if (action === 'reject') {
             const reason = prompt('الرجاء إدخال سبب الرفض:');
-            if (reason) {
-                await supabaseClient.from('employee_requests').update({ status: 'مرفوض', rejection_reason: reason }).eq('id', requestId);
-                alert('تم رفض الطلب.');
+            if (!reason) {
+                btn.disabled = false;
+                return; // إيقاف العملية إذا لم يتم إدخال سبب
             }
+            updateData = { status: 'مرفوض', rejection_reason: reason };
+            successMessage = 'تم رفض الطلب بنجاح.';
         } else if (action === 'approve') {
+            if (!confirm('هل أنت متأكد من الموافقة على هذا الإجراء؟')) {
+                btn.disabled = false;
+                return;
+            }
+
             switch (stage) {
-                case 'supervisor_escalate':
-                    if (!confirm('هل أنت متأكد؟ سيتم رفع الطلب للعمليات.')) break;
-                    await supabaseClient.from('employee_requests').update({ status: 'بانتظار موافقة العمليات', supervisor_approver_id: currentUser.id }).eq('id', requestId);
-                    alert('تم رفع الطلب بنجاح.');
-                    break;
                 case 'ops_escalate':
-                    if (!confirm('هل أنت متأكد؟ سيتم رفع الطلب للموارد البشرية.')) break;
-                    await supabaseClient.from('employee_requests').update({ status: 'بانتظار موافقة الموارد البشرية', ops_approver_id: currentUser.id }).eq('id', requestId);
-                    alert('تم رفع الطلب بنجاح.');
+                    updateData = { status: 'بانتظار موافقة الموارد البشرية', ops_approver_id: currentUser.id };
+                    successMessage = 'تم رفع الطلب للموارد البشرية.';
                     break;
-                case 'ops_permission_final': // <-- هذه هي الحالة الجديدة والمهمة
-                    if (!confirm('هل أنت متأكد من قبول طلب الاستئذان؟')) break;
-                    const permUserId = btn.dataset.userId;
-                    const { data: permUser } = await supabaseClient.from('users').select('*, job_vacancies(*)').eq('id', permUserId).single();
-                    if (!permUser || !permUser.job_vacancies) throw new Error('لا يمكن العثور على بيانات الموظف أو شاغره.');
-                    
-                    await supabaseClient.from('employee_requests').update({ status: 'مقبول', ops_approver_id: currentUser.id }).eq('id', requestId);
-                    
-                    const modal = document.getElementById('create-coverage-modal');
-                    const shift = permUser.job_vacancies.schedule_details[0];
-                    document.getElementById('coverage-new-project').value = permUser.project || '';
-                    document.getElementById('coverage-new-location').value = permUser.location || '';
-                    document.getElementById('coverage-new-start-time').value = new Date().toTimeString().slice(0, 5);
-                    document.getElementById('coverage-new-end-time').value = shift.end_time;
-                    document.getElementById('coverage-new-reason').value = 'استئذان';
-                    alert('تم قبول الاستئذان. يرجى الآن مراجعة تفاصيل التغطية وإضافتها.');
-                    modal.classList.remove('hidden');
-                    break;
+                
                 case 'hr_final':
-                    // ... (منطق الموارد البشرية يبقى كما هو) ...
+                    // منطق الموافقة النهائية من الموارد البشرية
+                    updateData = { status: 'مقبول' };
+                    successMessage = 'تمت الموافقة النهائية على الطلب.';
+                    
+                    // إذا كان الطلب إجازة أو استقالة، قم بإخلاء الشاغر الوظيفي
+                    if ((requestType === 'leave' || requestType === 'resignation') && vacancyId) {
+                        await supabaseClient.from('users').update({ vacancy_id: null }).eq('id', userId);
+                        await supabaseClient.from('job_vacancies').update({ status: 'open' }).eq('id', vacancyId);
+                        successMessage += ' وتم إخلاء الشاغر الوظيفي.';
+                    }
                     break;
+
                 default:
-                    alert('خطأ: مرحلة الموافقة غير معروفة.');
+                    throw new Error('مرحلة الموافقة غير معروفة.');
             }
         }
+
+        // تنفيذ التحديث على قاعدة البيانات
+        const { error } = await supabaseClient.from('employee_requests').update(updateData).eq('id', requestId);
+        if (error) throw error;
+
+        alert(successMessage);
+
     } catch (error) {
         alert(`حدث خطأ: ${error.message}`);
+        console.error("Request Action Error:", error);
     } finally {
         btn.disabled = false;
-        // تحديث الواجهة
+        // إعادة تحميل محتوى الصفحات المفتوحة لتحديث البيانات
+        if (document.querySelector('#page-leave-requests:not(.hidden)')) loadLeaveRequests();
+        if (document.querySelector('#page-resignation-requests:not(.hidden)')) loadResignationRequests();
+        if (document.querySelector('#page-loan-requests:not(.hidden)')) loadLoanRequests();
         if (document.querySelector('#page-ops-review-requests:not(.hidden)')) loadOpsReviewRequestsPage();
-        if (document.querySelector('#page-supervisor-permission-requests:not(.hidden)')) loadSupervisorPermissionRequestsPage();
-        if (document.querySelector('#page-permission-requests:not(.hidden)')) loadPermissionRequests();
     }
     return;
 }
-// نهاية الاستبدال
+// ========= نهاية الاستبدال الكامل لمنطق أزرار الطلبات =========
 // نهاية الإضافة
 
     // بداية الإضافة: منطق عرض نافذة الشواغر المتاحة
