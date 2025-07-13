@@ -2175,7 +2175,7 @@ async function loadHrAttendanceLogPage(filters = {}) {
 
 // ========= نهاية الاستبدال الكامل للدالة =========
 
-// ========= بداية الاستبدال الكامل للدالة النهائية =========
+// بداية الكود الجديد والمُصحح
 async function generatePayroll() {
     const resultsContainer = document.getElementById('payroll-results-container');
     const startDateString = document.getElementById('payroll-start-date').value;
@@ -2187,6 +2187,8 @@ async function generatePayroll() {
         return alert('الرجاء تحديد تاريخ البداية والنهاية أولاً.');
     }
     resultsContainer.innerHTML = '<p style="text-align: center;">جاري جلب البيانات وحساب الرواتب...</p>';
+    
+    // **الخطوة 1: إعادة تعيين مصفوفة بيانات التصدير في كل مرة**
     payrollExportData = []; 
 
     try {
@@ -2203,17 +2205,16 @@ async function generatePayroll() {
         if (projectFilter) employeesQuery = employeesQuery.like('project', `%${projectFilter}%`);
         if (locationFilter) employeesQuery = employeesQuery.like('location', `%${locationFilter}%`);
 
-        // جلب كل البيانات المطلوبة دفعة واحدة
         const [ 
             { data: employees, error: e1 }, 
             { data: attendanceRecords, error: e2 }, 
             { data: leaveRecords, error: e3 },
-            { data: penalties, error: e4 } // <-- جلب العقوبات
+            { data: penalties, error: e4 }
         ] = await Promise.all([
             employeesQuery,
             supabaseClient.from('attendance').select('guard_id, created_at').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
             supabaseClient.from('employee_requests').select('user_id, details->>start_date, details->>days').eq('request_type', 'leave').eq('status', 'مقبول'),
-            supabaseClient.from('penalties').select('user_id, amount').gte('deduction_date', startDateString).lte('deduction_date', endDateString) // <-- جلب العقوبات في نفس الفترة
+            supabaseClient.from('penalties').select('user_id, amount').gte('deduction_date', startDateString).lte('deduction_date', endDateString)
         ]);
 
         if (e1 || e2 || e3 || e4) throw (e1 || e2 || e3 || e4);
@@ -2268,15 +2269,28 @@ async function generatePayroll() {
             }
             const latenessDeduction = (totalLateMinutes / 60) * hourlyRate;
 
-            // --- بداية إضافة منطق خصم العقوبات ---
             const employeePenaltiesTotal = penalties
                 .filter(p => p.user_id === emp.id)
                 .reduce((total, p) => total + (p.amount || 0), 0);
-            // --- نهاية إضافة منطق خصم العقوبات ---
 
-            const netSalary = grossSalary - absenceDeduction - latenessDeduction - employeePenaltiesTotal; // <-- تحديث المعادلة النهائية
+            const netSalary = grossSalary - absenceDeduction - latenessDeduction - employeePenaltiesTotal;
 
-            // ... (تحديث بيانات التصدير لاحقاً إذا احتجت) ...
+            // **الخطوة 2: إضافة صف البيانات المحسوبة إلى مصفوفة التصدير**
+            payrollExportData.push({
+                name: emp.name,
+                id_number: emp.id_number || '',
+                phone: emp.phone || '',
+                iban: emp.iban || '',
+                project: emp.project || '',
+                location: emp.location || '',
+                role: emp.role || '',
+                gross_salary: grossSalary,
+                absence_days: absentDays,
+                absence_deduction: absenceDeduction,
+                late_minutes: totalLateMinutes,
+                lateness_deduction: latenessDeduction,
+                net_salary: netSalary
+            });
 
             tableRowsHtml += `
                 <tr>
@@ -2301,7 +2315,7 @@ async function generatePayroll() {
         console.error("Payroll Generation Error:", err);
     }
 }
-// ========= نهاية الاستبدال الكامل للدالة النهائية =========
+// نهاية الكود الجديد والمُصحح
 // --- دالة جديدة لصفحة التوظيف ---
 // --- دالة مطورة لصفحة التوظيف ---
 // --- دالة صفحة التوظيف مع تفعيل السحب والإفلات والفلترة ---
