@@ -1281,7 +1281,7 @@ async function loadSupervisorApplicationsPage() {
         .from('job_applications')
         .select(`*, job_vacancies!inner(title, project, specific_location)`)
         .eq('status', 'pending_supervisor')
-        .eq('job_vacancies.project', currentUser.project);
+        
 
     if (error) { container.innerHTML = '<p style="color:red;">حدث خطأ.</p>'; return console.error(error); }
     if (applications.length === 0) { container.innerHTML = '<p style="text-align: center;">لا توجد طلبات توظيف جديدة لمراجعتها.</p>'; return; }
@@ -1386,19 +1386,31 @@ async function loadOpsNomineesPage() {
 }
 // نهاية الإضافة
 
-// بداية الاستبدال
-async function loadHrOpsHiringPage() {
-    const container = document.getElementById('hr-ops-hiring-container');
+// ========= بداية الاستبدال الكامل للدالة =========
+async function loadHrOpsHiringPage(tab = 'new') {
+    const containerId = (tab === 'new') ? 'hr-ops-hiring-new-container' : 'hr-ops-hiring-archive-container';
+    const container = document.getElementById(containerId);
     if (!container) return;
-    container.innerHTML = '<p style="text-align: center;">جاري تحميل...</p>';
+    container.innerHTML = `<p style="text-align: center;">جاري تحميل...</p>`;
+    
+    // تحديد الحالة المطلوبة بناءً على التبويب
+    const statusFilter = (tab === 'new') ? ['approved'] : ['hr_acknowledged'];
 
     const { data: applications, error } = await supabaseClient
         .from('job_applications')
         .select(`*, job_vacancies(title, project)`)
-        .in('status', ['approved', 'hr_acknowledged']); // جلب المعتمد والمؤرشف
+        .in('status', statusFilter)
+        // الترتيب حسب الأقدم (تصاعدي)
+        .order('created_at', { ascending: true }); 
 
-    if (error) { container.innerHTML = '<p style="color:red;">حدث خطأ.</p>'; return; }
-    if (applications.length === 0) { container.innerHTML = '<p>لا توجد توظيفات جديدة لمراجعتها.</p>'; return; }
+    if (error) {
+        container.innerHTML = '<p style="color:red;">حدث خطأ في جلب البيانات.</p>';
+        return console.error(error);
+    }
+    if (applications.length === 0) {
+        container.innerHTML = `<p style="text-align: center;">لا توجد طلبات في ${tab === 'new' ? 'المراجعات الجديدة' : 'الأرشيف'}.</p>`;
+        return;
+    }
 
     container.innerHTML = '';
     applications.forEach(app => {
@@ -1409,16 +1421,19 @@ async function loadHrOpsHiringPage() {
                 <h4>توظيف جديد: ${app.applicant_data.full_name}</h4>
                 <span class="status-badge">${isAcknowledged ? 'تمت المراجعة' : 'بانتظار المراجعة'}</span>
             </div>
-            <div class="review-request-body"><p><strong>الوظيفة:</strong> ${app.job_vacancies.title} في مشروع ${app.job_vacancies.project}</p></div>
+            <div class="review-request-body">
+                <p><strong>الوظيفة:</strong> ${app.job_vacancies.title} في مشروع ${app.job_vacancies.project}</p>
+                <p><strong>تاريخ التقديم:</strong> ${new Date(app.created_at).toLocaleDateString('ar-SA')}</p>
+            </div>
             <div class="review-request-footer">
                 <button class="btn btn-secondary view-applicant-details-btn" data-appid="${app.id}"><i class="ph-bold ph-eye"></i> عرض التفاصيل</button>
-                <button class="btn btn-success hr-acknowledge-hire-btn" data-appid="${app.id}" ${isAcknowledged ? 'disabled' : ''}><i class="ph-bold ph-check-square"></i> تأكيد المراجعة</button>
+                <button class="btn btn-primary hr-acknowledge-hire-btn" data-appid="${app.id}" ${isAcknowledged ? 'disabled' : ''}><i class="ph-bold ph-check-square"></i> تأكيد المراجعة ونقل للأرشيف</button>
             </div>
         </div>`;
         container.insertAdjacentHTML('beforeend', cardHtml);
     });
 }
-// نهاية الاستبدال
+// ========= نهاية الاستبدال الكامل للدالة =========
 
 // --- بداية كود التحقق الدوري عن التوجيهات ---
 
@@ -2833,6 +2848,16 @@ if (event.target.id === 'coverage-link-vacancy') {
 // --- 3. Master Click Handler for the entire application ---
 document.body.addEventListener('click', async function(event) {
 
+// --- منطق تبويبات صفحة توظيف العمليات ---
+const hrOpsTab = event.target.closest('#page-hr-ops-hiring .tab-link');
+if (hrOpsTab) {
+    if (hrOpsTab.dataset.tab === 'hr-new-reviews') {
+        loadHrOpsHiringPage('new');
+    } else if (hrOpsTab.dataset.tab === 'hr-archive-reviews') {
+        loadHrOpsHiringPage('archive');
+    }
+}
+
     // الربط بالتبويبات داخل الصفحة
 const archiveTab = event.target.closest('#page-requests-archive .tab-link');
 if (archiveTab) {
@@ -3163,7 +3188,7 @@ if (hrAcknowledgeBtn) {
     }
 }
 // نهاية الاستبدال
-// بداية الاستبدال
+// بداية الكود الجديد
 const opsReviewBtn = event.target.closest('.ops-review-applicant-btn');
 if (opsReviewBtn) {
     const applicationId = opsReviewBtn.dataset.appid;
@@ -3190,23 +3215,22 @@ if (opsReviewBtn) {
     const appData = application.applicant_data;
     const vacancy = application.job_vacancies;
 
-    // --- بداية الجزء الجديد: جلب روابط الصور ---
     const signedUrlsToGenerate = [];
     if (application.id_photo_url) signedUrlsToGenerate.push(application.id_photo_url);
     if (application.iban_certificate_url) signedUrlsToGenerate.push(application.iban_certificate_url);
 
-    let idPhotoUrl = '#';
-    let ibanCertUrl = '#';
+    // --- هنا التعديل: استخدام كود صورة بدلاً من ملف ---
+    let idPhotoUrl = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 100'%3E%3Crect width='150' height='100' fill='%23f0f2f5'/%3E%3Ctext x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Cairo, sans-serif' font-size='12' fill='%23a0aec0'%3Eلا يوجد مرفق%3C/text%3E%3C/svg%3E";
+    let ibanCertUrl = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 100'%3E%3Crect width='150' height='100' fill='%23f0f2f5'/%3E%3Ctext x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Cairo, sans-serif' font-size='12' fill='%23a0aec0'%3Eلا يوجد مرفق%3C/text%3E%3C/svg%3E";
 
     if (signedUrlsToGenerate.length > 0) {
         const { data: signedUrls, error: urlError } = await supabaseClient
             .storage.from('job-applications').createSignedUrls(signedUrlsToGenerate, 300);
         if (!urlError) {
-            idPhotoUrl = signedUrls.find(u => u.path === application.id_photo_url)?.signedUrl || '#';
-            ibanCertUrl = signedUrls.find(u => u.path === application.iban_certificate_url)?.signedUrl || '#';
+            idPhotoUrl = signedUrls.find(u => u.path === application.id_photo_url)?.signedUrl || idPhotoUrl;
+            ibanCertUrl = signedUrls.find(u => u.path === application.iban_certificate_url)?.signedUrl || ibanCertUrl;
         }
     }
-    // --- نهاية الجزء الجديد ---
 
     formBody.innerHTML = `
         <h4>1. المعلومات الشخصية (قابلة للتعديل)</h4>
@@ -3217,10 +3241,16 @@ if (opsReviewBtn) {
             <div class="form-group"><label>رقم الآيبان</label><input type="text" id="review-iban" value="${appData.iban || ''}"></div>
         </div>
         <hr>
-        <h4>2. المرفقات</h4>
-        <div class="info-line" style="gap: 15px;">
-            <a href="${idPhotoUrl}" target="_blank" class="btn btn-secondary"><i class="ph-bold ph-identification-card"></i> عرض صورة الهوية</a>
-            <a href="${ibanCertUrl}" target="_blank" class="btn btn-secondary"><i class="ph-bold ph-bank"></i> عرض شهادة الآيبان</a>
+        <h4>2. المرفقات (اضغط على الصورة للتكبير)</h4>
+        <div class="attachments-grid">
+            <div>
+                <h5>صورة الهوية</h5>
+                <img src="${idPhotoUrl}" alt="صورة الهوية" class="attachment-image viewable-image">
+            </div>
+            <div>
+                <h5>شهادة الآيبان</h5>
+                <img src="${ibanCertUrl}" alt="شهادة الآيبان" class="attachment-image viewable-image">
+            </div>
         </div>
         <hr>
         <h4>3. معلومات التوظيف (للتأكيد)</h4>
@@ -3234,7 +3264,7 @@ if (opsReviewBtn) {
         <div class="form-group"><label>كلمة مرور مؤقتة</label><input type="text" id="review-password" value="${appData.id_number}"></div>
     `;
 }
-// نهاية الاستبدال
+// نهاية الكود الجديد
 
 
     // بداية الإضافة: منطق رفض مدير العمليات للمرشح
@@ -3266,8 +3296,7 @@ if (opsRejectBtn) {
 
 // بداية الإضافة: منطق أزرار مراجعة طلبات التوظيف للمشرف
 
-// بداية الاستبدال
-// --- عند الضغط على "عرض التفاصيل" (مع أزرار التحميل) ---
+// بداية الكود الجديد
 const viewApplicantBtn = event.target.closest('.view-applicant-details-btn');
 if (viewApplicantBtn) {
     const applicationId = viewApplicantBtn.dataset.appid;
@@ -3277,67 +3306,58 @@ if (viewApplicantBtn) {
     modal.classList.remove('hidden');
     body.innerHTML = '<p style="text-align: center;">جاري تحميل البيانات...</p>';
 
-    const { data: application, error } = await supabaseClient
-        .from('job_applications')
-        .select('*')
-        .eq('id', applicationId)
-        .single();
+    try {
+        const { data: application, error } = await supabaseClient
+            .from('job_applications')
+            .select('*')
+            .eq('id', applicationId)
+            .single();
+        if (error || !application) throw new Error('خطأ في جلب بيانات المتقدم.');
 
-    if (error || !application) {
-        body.innerHTML = '<p style="color:red;">خطأ في جلب بيانات المتقدم.</p>';
-        return;
-    }
+        const signedUrlsToGenerate = [];
+        if (application.id_photo_url) signedUrlsToGenerate.push(application.id_photo_url);
+        if (application.iban_certificate_url) signedUrlsToGenerate.push(application.iban_certificate_url);
+        
+        // --- هنا التعديل: استخدام كود صورة بدلاً من ملف ---
+        let idPhotoUrl = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 100'%3E%3Crect width='150' height='100' fill='%23f0f2f5'/%3E%3Ctext x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Cairo, sans-serif' font-size='12' fill='%23a0aec0'%3Eلا يوجد مرفق%3C/text%3E%3C/svg%3E";
+        let ibanCertUrl = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 100'%3E%3Crect width='150' height='100' fill='%23f0f2f5'/%3E%3Ctext x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Cairo, sans-serif' font-size='12' fill='%23a0aec0'%3Eلا يوجد مرفق%3C/text%3E%3C/svg%3E";
 
-    const signedUrlsToGenerate = [];
-    if (application.id_photo_url) signedUrlsToGenerate.push(application.id_photo_url);
-    if (application.iban_certificate_url) signedUrlsToGenerate.push(application.iban_certificate_url);
-
-    let idPhotoUrl = '#';
-    let ibanCertUrl = '#';
-
-    if (signedUrlsToGenerate.length > 0) {
-        const { data: signedUrls, error: urlError } = await supabaseClient
-            .storage
-            .from('job-applications')
-            .createSignedUrls(signedUrlsToGenerate, 300); // صلاحية الرابط 5 دقائق
-
-        if (!urlError) {
-            idPhotoUrl = signedUrls.find(u => u.path === application.id_photo_url)?.signedUrl || '#';
-            ibanCertUrl = signedUrls.find(u => u.path === application.iban_certificate_url)?.signedUrl || '#';
+        if (signedUrlsToGenerate.length > 0) {
+            const { data: signedUrls, error: urlError } = await supabaseClient
+                .storage.from('job-applications').createSignedUrls(signedUrlsToGenerate, 300);
+            if (!urlError) {
+                idPhotoUrl = signedUrls.find(u => u.path === application.id_photo_url)?.signedUrl || idPhotoUrl;
+                ibanCertUrl = signedUrls.find(u => u.path === application.iban_certificate_url)?.signedUrl || ibanCertUrl;
+            }
         }
-    }
-    
-    const appData = application.applicant_data;
-    body.innerHTML = `
-        <div class="contract-display">
-            <h4>بيانات المتقدم</h4>
-            <p><strong>الاسم:</strong> ${appData.full_name || ''}</p>
-            <p><strong>رقم الهوية:</strong> ${appData.id_number || ''}</p>
-            <p><strong>رقم الجوال:</strong> ${appData.phone || ''}</p>
-            <p><strong>الآيبان:</strong> ${appData.iban || ''}</p>
-            <hr>
-            <h4>المرفقات</h4>
-            <div class="attachments-grid">
-                <div>
-                    <h5>صورة الهوية</h5>
-                    <img src="${idPhotoUrl}" alt="صورة الهوية" class="attachment-image">
-                    <a href="${idPhotoUrl}" download="ID-${appData.id_number}" class="btn btn-secondary btn-sm" style="width:100%; margin-top:10px;">
-                        <i class="ph-bold ph-download-simple"></i> تحميل
-                    </a>
-                </div>
-                <div>
-                    <h5>شهادة الآيبان</h5>
-                    <img src="${ibanCertUrl}" alt="شهادة الآيبان" class="attachment-image">
-                    <a href="${ibanCertUrl}" download="IBAN-${appData.id_number}" class="btn btn-secondary btn-sm" style="width:100%; margin-top:10px;">
-                        <i class="ph-bold ph-download-simple"></i> تحميل
-                    </a>
+        
+        const appData = application.applicant_data;
+        body.innerHTML = `
+            <div class="contract-display">
+                <h4>بيانات المتقدم</h4>
+                <p><strong>الاسم:</strong> ${appData.full_name || ''}</p>
+                <p><strong>رقم الهوية:</strong> ${appData.id_number || ''}</p>
+                <p><strong>رقم الجوال:</strong> ${appData.phone || ''}</p>
+                <p><strong>الآيبان:</strong> ${appData.iban || ''}</p>
+                <hr>
+                <h4>المرفقات (اضغط على الصورة للتكبير)</h4>
+                <div class="attachments-grid">
+                    <div>
+                        <h5>صورة الهوية</h5>
+                        <img src="${idPhotoUrl}" alt="صورة الهوية" class="attachment-image viewable-image">
+                    </div>
+                    <div>
+                        <h5>شهادة الآيبان</h5>
+                        <img src="${ibanCertUrl}" alt="شهادة الآيبان" class="attachment-image viewable-image">
+                    </div>
                 </div>
             </div>
-        </div>
-    `;
+        `;
+    } catch (error) {
+        body.innerHTML = `<p style="color:red;">${error.message}</p>`;
+    }
 }
-// نهاية الاستبدال
-
+// نهاية الكود الجديد
 // --- عند الضغط على "ترشيح" ---
 const nominateBtn = event.target.closest('.nominate-applicant-btn');
 if (nominateBtn) {
@@ -5632,39 +5652,90 @@ if (confirmEndPatrolBtn) {
     const checkInBtn = event.target.closest('#check-in-btn');
     const checkOutBtn = event.target.closest('#check-out-btn');
 
-    // عند الضغط على زر "تسجيل حضور"
-// ==================== بداية الاستبدال ====================
-    // عند الضغط على زر "تسجيل حضور"
-    // ==================== بداية الاستبدال ====================
-// عند الضغط على زر "تسجيل حضور"
-// ==================== بداية الاستبدال ====================
-// عند الضغط على زر "تسجيل حضور"
+// بداية الكود الجديد والمطور
 if (checkInBtn) {
     checkInBtn.disabled = true;
-    checkInBtn.innerHTML = '<i class="ph-fill ph-spinner-gap animate-spin"></i> جاري ...';
+    checkInBtn.innerHTML = '<i class="ph-fill ph-spinner-gap animate-spin"></i> التحقق من الوردية...';
 
-    navigator.geolocation.getCurrentPosition(async (position) => {
-        const { latitude, longitude } = position.coords;
-        const { error } = await supabaseClient.from('attendance').insert({
-            guard_id: currentUser.id,
-            guard_name: currentUser.name,
-            checkin_lat: latitude,
-            checkin_lon: longitude,
-            status: 'حاضر'
+    try {
+        // 1. التحقق من وجود شاغر وجدول للمستخدم
+        if (!currentUser.vacancy_id) {
+            throw new Error('أنت غير معين على شاغر وظيفي حالياً، لا يمكن تحديد ورديتك.');
+        }
+        const { data: vacancy, error: vacancyError } = await supabaseClient
+            .from('job_vacancies')
+            .select('schedule_details')
+            .eq('id', currentUser.vacancy_id)
+            .single();
+
+        if (vacancyError || !vacancy || !vacancy.schedule_details || vacancy.schedule_details.length === 0) {
+            throw new Error('لم يتم العثور على جدول ورديات لك. يرجى مراجعة الإدارة.');
+        }
+
+        const shift = vacancy.schedule_details[0];
+        const dayMap = {Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6};
+        const todayIndex = new Date().getDay();
+        const todayKey = Object.keys(dayMap).find(key => dayMap[key] === todayIndex);
+
+        if (!shift.days.includes(todayKey)) {
+            throw new Error('ليس لديك وردية مجدولة لهذا اليوم.');
+        }
+
+        // 2. حساب أوقات الدوام المسموح بها
+        const now = new Date();
+        const [startHours, startMinutes] = shift.start_time.split(':');
+        
+        const shiftStartTime = new Date();
+        shiftStartTime.setHours(startHours, startMinutes, 0, 0);
+
+        const allowedCheckinTime = new Date(shiftStartTime.getTime() - 15 * 60 * 1000); // 15 دقيقة قبل الوردية
+
+        // 3. التحقق إذا كان الوقت مبكراً جداً
+        if (now < allowedCheckinTime) {
+            const remainingMs = allowedCheckinTime - now;
+            const remainingMinutes = Math.ceil(remainingMs / 60000);
+            const shiftTimeFormatted = formatTimeAMPM(shift.start_time);
+
+            const alertMessage = `لا يمكنك تسجيل الحضور الآن.\n\nموعد ورديتك هو الساعة ${shiftTimeFormatted}.\nيمكنك تسجيل الحضور قبل 15 دقيقة فقط من بداية الوردية.\n\nباقي على وقت الحضور: ${remainingMinutes} دقيقة تقريباً.`;
+            alert(alertMessage);
+            
+            throw new Error("الوقت مبكر جداً لتسجيل الحضور."); // إيقاف التنفيذ وإظهار الخطأ في الكونسول
+        }
+
+        // 4. إذا كان الوقت مناسباً، قم بطلب الموقع والمتابعة
+        checkInBtn.innerHTML = '<i class="ph-fill ph-spinner-gap animate-spin"></i> جاري تحديد الموقع...';
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const { latitude, longitude } = position.coords;
+            const { error } = await supabaseClient.from('attendance').insert({
+                guard_id: currentUser.id,
+                guard_name: currentUser.name,
+                checkin_lat: latitude,
+                checkin_lon: longitude,
+                status: 'حاضر'
+            });
+
+            if (error) {
+                alert('حدث خطأ أثناء تسجيل الحضور.');
+            } else {
+                alert('تم تسجيل حضورك بنجاح.');
+            }
+            loadAttendancePage(); // تحديث الواجهة
+        }, (geoError) => {
+            // يتم استدعاء هذا الجزء في حالة رفض صلاحية الموقع
+            alert('لا يمكن تسجيل الحضور. يرجى تمكين صلاحية الوصول للموقع من إعدادات المتصفح.');
+            checkInBtn.disabled = false;
+            checkInBtn.innerHTML = 'تسجيل حضور';
         });
 
-        if (error) {
-            alert('حدث خطأ أثناء تسجيل الحضور.');
-        } else {
-            alert('تم تسجيل حضورك بنجاح.');
-        }
-        loadAttendancePage(); // إعادة تحميل الواجهة لتبدأ التتبع
-    }, (error) => {
-        alert('لا يمكن تسجيل الحضور. يرجى تمكين صلاحية الوصول للموقع.');
+    } catch (error) {
+        // هذا الجزء يلتقط أي خطأ يحدث في الخطوات أعلاه
+        // alert(error.message); // يمكنك تفعيل هذا السطر إذا أردت ظهور رسالة بالخطأ
+        console.error("Check-in Error:", error.message);
         checkInBtn.disabled = false;
         checkInBtn.innerHTML = 'تسجيل حضور';
-    });
+    }
 }
+// نهاية الكود الجديد والمطور
 
 // عند الضغط على زر "تسجيل انصراف"
 // ==================== بداية الاستبدال ====================
@@ -6024,6 +6095,52 @@ async function loadMyRequestsPage() {
 // ===================== نهاية الإضافة =====================
 
 }
+// ==================== بداية كود تفعيل نافذة عرض الصورة المكبرة ====================
+document.addEventListener('DOMContentLoaded', () => {
+
+    // لا تفعل شيئاً إذا لم نجد هذه العناصر (لأن الكود قد يعمل في صفحات أخرى)
+    const imageViewerModal = document.getElementById('image-viewer-modal');
+    if (!imageViewerModal) return; 
+
+    const zoomedImage = document.getElementById('zoomed-image');
+    const closeBtn = imageViewerModal.querySelector('.modal-close-btn');
+
+    // وظيفة إغلاق النافذة
+    const closeModal = () => {
+        imageViewerModal.classList.add('hidden');
+        zoomedImage.src = ''; // إفراغ الصورة لمنع ظهورها للحظة عند الفتح مرة أخرى
+    };
+
+    // المستمع الرئيسي الذي يراقب كل النقرات في الصفحة
+    document.addEventListener('click', function(event) {
+        const target = event.target;
+        
+        // التحقق إذا كانت الصورة قابلة للعرض
+        if (target.classList.contains('viewable-image')) {
+            // التحقق من أن الرابط ليس صورة placeholder
+            if (target.src && !target.src.endsWith('placeholder.png')) {
+                zoomedImage.src = target.src;
+                imageViewerModal.classList.remove('hidden');
+            } else {
+                alert('لا يمكن عرض هذه الصورة حالياً.');
+            }
+        }
+    });
+
+    // ربط زر الإغلاق
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
+    
+    // ربط النقر على الخلفية للإغلاق
+    imageViewerModal.addEventListener('click', (event) => {
+        // يتم الإغلاق فقط عند النقر على الخلفية نفسها وليس على الصورة
+        if (event.target === imageViewerModal) {
+            closeModal();
+        }
+    });
+});
+// ==================== نهاية كود تفعيل نافذة عرض الصورة المكبرة ====================
 // ------------------------------------
 // ------------------------------------
 
