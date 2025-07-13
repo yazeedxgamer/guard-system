@@ -2085,3 +2085,46 @@ body {
         width: 100%; /* اجعل حقل الإدخال يأخذ كامل العرض المتاح */
     }
 }
+/* ============================================== */
+/* ===   إصلاح نهائي ومخصص لصفحة ملفي الشخصي   === */
+/* ============================================== */
+@media (max-width: 768px) {
+    /* استهداف الحاوية الرئيسية في صفحة ملفي الشخصي */
+    #page-my-profile .attendance-card {
+        display: flex;
+        flex-direction: column; /* الأهم: جعل العناصر تترتب عمودياً */
+        align-items: stretch; /* جعل العناصر تملأ العرض */
+        text-align: right; /* محاذاة كل النصوص لليمين */
+        padding: 20px;
+    }
+
+    #page-my-profile h4 {
+        width: 100%;
+        text-align: center; /* توسط العنوان */
+        margin-bottom: 25px; /* مسافة تحت العنوان */
+    }
+
+    #page-my-profile .form-group {
+        width: 100%; /* اجعل مجموعة الحقل تأخذ العرض الكامل */
+        margin-bottom: 20px;
+    }
+
+    #page-my-profile .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+
+    #page-my-profile .form-group input {
+        width: 100%;
+        padding: 12px;
+        font-size: 1rem;
+    }
+
+    /* تنسيق خاص لزر التحديث */
+    #page-my-profile .btn-primary {
+        width: 100%;
+        margin-top: 10px;
+        padding: 14px;
+    }
+}
