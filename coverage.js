@@ -122,8 +122,8 @@ document.getElementById('job-application-form')?.addEventListener('submit', asyn
         const ibanCert = document.getElementById('job-app-iban-cert').files[0];
         if (!idPhoto || !ibanCert) throw new Error('الرجاء إرفاق الملفات المطلوبة.');
 
-        const idPhotoPath = `public/${vacancyId}-${Date.now()}-id-${idPhoto.name}`;
-        const ibanCertPath = `public/${vacancyId}-${Date.now()}-iban-${ibanCert.name}`;
+        const idPhotoPath = `${vacancyId}-${Date.now()}-id-${idPhoto.name}`;
+        const ibanCertPath = `${vacancyId}-${Date.now()}-iban-${ibanCert.name}`;
         
         const [idUploadResult, ibanUploadResult] = await Promise.all([
             supabaseClient.storage.from('job-applications').upload(idPhotoPath, idPhoto),
