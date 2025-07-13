@@ -19,7 +19,7 @@ messaging.onBackgroundMessage(payload => {
     const notificationTitle = payload.notification.title || 'اشعار جديد';
     const notificationOptions = {
         body: payload.notification.body,
-        icon: '/icons/icon-192.png',
+        icon: '/icon-192.png',
         data: {
             url: payload.fcmOptions?.link || '/'
         }
