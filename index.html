@@ -70,6 +70,7 @@
         <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-resignation-requests"><i class="ph-fill ph-file-x"></i><span>طلبات الاستقالات</span></a></li>
         <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-loan-requests"><i class="ph-fill ph-hand-coins"></i><span>طلبات السلف</span></a></li>
         <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-hr-attendance-log"><i class="ph-fill ph-user-list-checks"></i><span>سجل الحضور</span></a></li>
+        <li data-role="ادارة الموارد البشرية"><a href="#" data-page="page-requests-archive"><i class="ph-fill ph-archive"></i><span>أرشيف الطلبات</span></a></li>
         <li data-role="ادارة العمليات"><a href="#" data-page="page-hiring"><i class="ph-fill ph-user-plus"></i><span>التوظيف</span></a></li>
         <li data-role="حارس أمن"><a href="#statistics" data-page="page-attendance"><i class="ph-fill ph-timer"></i><span>الحضور و الانصراف</span></a></li>
         <li data-role="حارس أمن"><a href="#statistics" data-page="page-my-requests"><i class="ph-fill ph-files"></i><span>طلباتي</span></a></li>
@@ -134,7 +135,13 @@
                 
                 
                 <div id="page-jobs" class="page-content hidden"><p>محتوى صفحة الوظائف هنا.</p></div>
-                <div id="page-geo" class="page-content hidden" style="padding: 0;"><div id="map"></div></div>
+                <div id="page-geo" class="page-content hidden" style="position: relative; padding: 0;">
+    <div id="map"></div>
+    <div id="map-search-container" style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; gap: 5px;">
+        <input type="text" id="map-search-input" placeholder="ابحث باسم الحارس..." style="border-radius: 6px; border: 1px solid #ccc; padding: 8px;">
+        <button id="map-search-btn" class="btn btn-primary" style="padding: 8px 12px;"><i class="ph-bold ph-magnifying-glass"></i></button>
+    </div>
+    </div>
                 <div id="page-schedules" class="page-content hidden"><p>محتوى صفحة الجداول والمناوبات هنا.</p></div>
                 <div id="page-coverage" class="page-content hidden">
     <div class="page-header">
@@ -248,21 +255,22 @@
         <h3>سجل حضور وانصراف الحراس</h3>
     </div>
     <div class="report-filters-card" style="margin-bottom: 20px;">
-        <div class="filter-grid" style="grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));">
-            <div class="filter-group">
-                <label for="hr-attendance-from">من تاريخ</label>
-                <input type="date" id="hr-attendance-from">
+        <div class="filter-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">
+            <div class="form-group">
+                <label>من تاريخ</label><input type="date" id="hr-attendance-from">
             </div>
-            <div class="filter-group">
-                <label for="hr-attendance-to">إلى تاريخ</label>
-                <input type="date" id="hr-attendance-to">
+            <div class="form-group">
+                <label>إلى تاريخ</label><input type="date" id="hr-attendance-to">
             </div>
-             <div class="filter-group">
-                <label for="hr-attendance-status">الحالة</label>
-                <select id="hr-attendance-status">
-                    <option value="">الكل</option>
-                    <option value="حاضر">حاضر</option>
-                    </select>
+             <div class="form-group">
+                <label>الحالة</label>
+                <select id="hr-attendance-status"><option value="">الكل</option><option value="حاضر">حاضر</option></select>
+            </div>
+            <div class="form-group">
+                <label>المشروع</label><input type="text" id="hr-attendance-project" placeholder="بحث بالمشروع...">
+            </div>
+            <div class="form-group">
+                <label>الموقع</label><input type="text" id="hr-attendance-location" placeholder="بحث بالموقع...">
             </div>
             <div class="filter-group" style="align-items: flex-end;">
                  <button id="hr-attendance-search-btn" class="btn btn-primary" style="width: 100%;">بحث</button>
@@ -365,9 +373,11 @@
 
 <div id="page-guard-attendance" class="page-content hidden">
     <div class="page-header">
-        <h3>متابعة حضور الحراس</h3>
+    <h3>متابعة حضور الحراس</h3>
+    <div> <button id="send-to-all-guards-btn" class="btn btn-primary"><i class="ph-bold ph-users-three"></i> <span>إرسال توجيه للكل</span></button>
         <button id="request-transfer-btn" class="btn btn-secondary"><i class="ph-bold ph-arrows-clockwise"></i> <span>طلب نقل حارس</span></button>
     </div>
+</div>
     <div id="guard-attendance-container">
         <p style="text-align: center;">جاري تحميل بيانات الحضور...</p>
     </div>
@@ -510,10 +520,6 @@
             <input type="password" id="new-password" placeholder="يجب أن تكون 6 أحرف على الأقل">
         </div>
         <div class="form-group">
-                    <label for="employee-start-date">تاريخ المباشرة</label>
-                    <input type="date" id="employee-start-date">
-                </div>
-        <div class="form-group">
             <label for="confirm-new-password">تأكيد كلمة المرور الجديدة</label>
             <input type="password" id="confirm-new-password">
         </div>
@@ -536,6 +542,26 @@
         <div id="penalties-employee-list">
             <p style="text-align: center;">جاري تحميل قائمة الموظفين...</p>
         </div>
+    </div>
+</div>
+<div id="page-requests-archive" class="page-content hidden">
+    <div class="page-header">
+        <h3>أرشيف الطلبات</h3>
+    </div>
+    <div class="tabs">
+        <a href="#" class="tab-link active" data-tab="archive-leave-tab"><i class="ph-bold ph-calendar-blank"></i> الإجازات</a>
+        <a href="#" class="tab-link" data-tab="archive-loan-tab"><i class="ph-bold ph-hand-coins"></i> السلف</a>
+        <a href="#" class="tab-link" data-tab="archive-resignation-tab"><i class="ph-bold ph-file-x"></i> الاستقالات</a>
+    </div>
+
+    <div id="archive-leave-tab" class="tab-content active">
+        <p style="text-align: center; padding-top: 20px;">جاري تحميل أرشيف الإجازات...</p>
+    </div>
+    <div id="archive-loan-tab" class="tab-content">
+        <p style="text-align: center; padding-top: 20px;">جاري تحميل أرشيف السلف...</p>
+    </div>
+    <div id="archive-resignation-tab" class="tab-content">
+        <p style="text-align: center; padding-top: 20px;">جاري تحميل أرشيف الاستقالات...</p>
     </div>
 </div>
 </div> </main>
@@ -583,6 +609,7 @@
 <div id="page-guard-attendance" class="page-content hidden">
     <div class="page-header">
         <h3>متابعة حضور الحراس</h3>
+        <div> <button id="send-to-all-guards-btn" class="btn btn-primary"><i class="ph-bold ph-users-three"></i> <span>إرسال توجيه للكل</span></button>
         <button id="request-transfer-btn" class="btn btn-secondary"><i class="ph-bold ph-arrows-clockwise"></i> <span>طلب نقل حارس</span></button>
     </div>
     <div id="guard-attendance-container">
@@ -907,6 +934,10 @@
                         <option value="ادارة الموارد البشرية">ادارة الموارد البشرية</option>
                         <option value="ادارة العقود">ادارة العقود</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label for="employee-start-date">تاريخ المباشرة</label>
+                    <input type="date" id="employee-start-date">
                 </div>
                 <div class="form-group">
                     <label for="employee-password">كلمة المرور</label>
