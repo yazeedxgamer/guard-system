@@ -129,43 +129,68 @@ document.addEventListener('click', async (event) => {
     }
 });
 
-// منطق إرسال طلب التوظيف
+// بداية الكود النهائي والمُحسّن
 document.getElementById('job-application-form')?.addEventListener('submit', async function(event) {
     event.preventDefault();
     const submitBtn = document.getElementById('submit-job-application-btn');
     submitBtn.disabled = true;
     submitBtn.textContent = 'جاري الرفع والإرسال...';
+    
+    // تعريف مسارات الملفات هنا لتكون متاحة في حال حدوث خطأ
+    let idPhotoPath = null;
+    let ibanCertPath = null;
+
     try {
         const vacancyId = document.getElementById('apply-job-id').value;
         const idPhoto = document.getElementById('job-app-id-photo').files[0];
         const ibanCert = document.getElementById('job-app-iban-cert').files[0];
-        if (!idPhoto || !ibanCert) throw new Error('الرجاء إرفاق الملفات المطلوبة.');
-
-        const idPhotoPath = `public/${vacancyId}-${Date.now()}-id-${idPhoto.name}`;
-        const ibanCertPath = `public/${vacancyId}-${Date.now()}-iban-${ibanCert.name}`;
         
+        if (!idPhoto || !ibanCert) {
+            throw new Error('الرجاء إرفاق الملفات المطلوبة.');
+        }
+
+        // دالة لتنظيف اسم الملف من أي رموز غريبة قد تسبب خطأ
+        const sanitizeFilename = (filename) => filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+        
+        idPhotoPath = `public/${vacancyId}-${Date.now()}-id-${sanitizeFilename(idPhoto.name)}`;
+        ibanCertPath = `public/${vacancyId}-${Date.now()}-iban-${sanitizeFilename(ibanCert.name)}`;
+        
+        // رفع الملفات بالتوازي
         const [idUploadResult, ibanUploadResult] = await Promise.all([
             supabaseClient.storage.from('job-applications').upload(idPhotoPath, idPhoto),
             supabaseClient.storage.from('job-applications').upload(ibanCertPath, ibanCert)
         ]);
         
-        if (idUploadResult.error) throw idUploadResult.error;
-        if (ibanUploadResult.error) throw ibanUploadResult.error;
+        // التحقق من أخطاء الرفع بشكل دقيق
+        if (idUploadResult.error) throw new Error(`خطأ في رفع صورة الهوية: ${idUploadResult.error.message}`);
+        if (ibanUploadResult.error) throw new Error(`خطأ في رفع شهادة الآيبان: ${ibanUploadResult.error.message}`);
 
         const applicationData = {
             vacancy_id: vacancyId,
-            applicant_data: { full_name: document.getElementById('job-app-full-name').value, id_number: document.getElementById('job-app-id-number').value, phone: document.getElementById('job-app-phone').value, iban: document.getElementById('job-app-iban').value, },
+            applicant_data: { 
+                full_name: document.getElementById('job-app-full-name').value, 
+                id_number: document.getElementById('job-app-id-number').value, 
+                phone: document.getElementById('job-app-phone').value, 
+                iban: document.getElementById('job-app-iban').value 
+            },
             id_photo_url: idUploadResult.data.path,
             iban_certificate_url: ibanUploadResult.data.path,
             status: 'pending_supervisor'
         };
 
-        const { error: insertError } = await supabaseClient.from('job_applications').insert(applicationData);
-        if (insertError) throw insertError;
+        const { error: insertError } = await supabaseClient.from('job_applications').insert([applicationData]);
+        
+        if (insertError) {
+            // إذا فشلت إضافة البيانات، قم بحذف الملفات التي تم رفعها لتنظيف المساحة
+            console.log('فشل حفظ البيانات، سيتم محاولة حذف الملفات المرفوعة...');
+            await supabaseClient.storage.from('job-applications').remove([idPhotoPath, ibanCertPath]);
+            throw new Error(`خطأ في حفظ البيانات: ${insertError.message}`);
+        }
         
         alert('تم إرسال طلب التوظيف بنجاح! سيتم مراجعته والتواصل معك.');
         document.getElementById('job-application-modal').classList.add('hidden');
         this.reset();
+
     } catch (error) {
         alert('حدث خطأ أثناء تقديم الطلب: ' + error.message);
     } finally {
@@ -173,6 +198,7 @@ document.getElementById('job-application-form')?.addEventListener('submit', asyn
         submitBtn.textContent = 'إرسال طلب التوظيف';
     }
 });
+// نهاية الكود النهائي
 
 document.addEventListener('DOMContentLoaded', () => {
     // تحميل التغطيات عند فتح الصفحة لأنها التبويب الافتراضي
