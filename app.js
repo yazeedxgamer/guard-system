@@ -4389,58 +4389,76 @@ if (event.target.closest('#add-location-from-input-btn')) {
 }
 
 // --- عند الضغط على زر "حفظ العقد" (النسخة المصححة) ---
-if (event.target.closest('#save-contract-btn')) {
-    const saveBtn = event.target.closest('#save-contract-btn');
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'جاري الحفظ...';
+// بداية الاستبدال
 
-    try {
-        const contractId = document.getElementById('contract-id-hidden').value;
-        const locationsData = Array.from(document.querySelectorAll('#locations-container .location-entry-card')).map(locCard => {
-            const shifts = Array.from(locCard.querySelectorAll('.shift-entry-card')).map(shiftCard => {
-                // ... (منطق جمع بيانات الورديات يبقى كما هو)
+    if (event.target.closest('#save-contract-btn')) {
+        const saveBtn = event.target.closest('#save-contract-btn');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'جاري الحفظ...';
+
+        try {
+            const contractId = document.getElementById('contract-id-hidden').value;
+            
+            // جمع بيانات المواقع والورديات
+            const locationsData = Array.from(document.querySelectorAll('#locations-container .location-entry-card')).map(locCard => {
+                const shifts = Array.from(locCard.querySelectorAll('.shift-entry-card')).map(shiftCard => {
+                    const days = Array.from(shiftCard.querySelectorAll('.days-selector input:checked')).map(input => input.value);
+                    return {
+                        name: shiftCard.querySelector('.shift-name').value,
+                        guards_count: parseInt(shiftCard.querySelector('.shift-guards-count').value) || 0,
+                        start_time: shiftCard.querySelector('.shift-start-time').value,
+                        end_time: shiftCard.querySelector('.shift-end-time').value,
+                        work_hours: parseFloat(shiftCard.querySelector('.shift-work-hours').value) || 0,
+                        days: days
+                    };
+                });
+                return {
+                    name: locCard.querySelector('h5').textContent,
+                    region: locCard.querySelector('.location-region-display').value,
+                    city: locCard.querySelector('.location-city-select').value,
+                    geofence_link: locCard.querySelector('.location-geofence-link').value,
+                    geofence_radius: parseInt(locCard.querySelector('.location-geofence-radius').value, 10) || 200,
+                    shifts: shifts
+                };
             });
-            return {
-                name: locCard.querySelector('h5').textContent,
-                region: locCard.querySelector('.location-region-display').value,
-                city: locCard.querySelector('.location-city-select').value,
-                geofence_link: locCard.querySelector('.location-geofence-link').value, // <-- إضافة جديدة
-                geofence_radius: parseInt(locCard.querySelector('.location-geofence-radius').value, 10) || 200, // <-- إضافة جديدة
-                shifts: shifts
+
+            // تجميع بيانات العقد الرئيسية
+            const contractData = {
+                company_name: document.getElementById('contract-company-name').value,
+                end_date: document.getElementById('contract-end-date').value || null,
+                work_days_policy: document.getElementById('contract-workdays-select').value,
+                region: document.getElementById('contract-region-select').value,
+                city: Array.from(document.querySelectorAll('#contract-cities-tags .tag-item')).map(tag => tag.firstChild.textContent),
+                contract_locations: locationsData,
+                // --- بداية الإضافة: تحديد قيمة افتراضية للحالة ---
+                status: 'active' 
+                // --- نهاية الإضافة ---
             };
-        });
 
-        
-        const contractData = {
-            company_name: document.getElementById('contract-company-name').value,
-            end_date: document.getElementById('contract-end-date').value || null,
-            work_days_policy: document.getElementById('contract-workdays-select').value,
-            region: document.getElementById('contract-region-select').value,
-            city: Array.from(document.querySelectorAll('#contract-cities-tags .tag-item')).map(tag => tag.firstChild.textContent),
-            contract_locations: locationsData
-        };
+            if (!contractData.company_name || !contractData.region) {
+                throw new Error('الرجاء تعبئة اسم العميل واختيار المنطقة.');
+            }
 
-        if (!contractData.company_name || !contractData.region) {
-            throw new Error('الرجاء تعبئة اسم العميل واختيار المنطقة.');
+            // تنفيذ عملية الحفظ (إنشاء أو تحديث)
+            const { error } = contractId
+                ? await supabaseClient.from('contracts').update(contractData).eq('id', contractId)
+                : await supabaseClient.from('contracts').insert([contractData]);
+
+            if (error) throw error;
+            
+            alert('تم حفظ العقد بنجاح!');
+            document.getElementById('contract-modal').classList.add('hidden');
+            fetchContracts();
+
+        } catch (error) {
+            alert('حدث خطأ: ' + error.message);
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'حفظ العقد';
         }
-
-        const { error } = contractId
-            ? await supabaseClient.from('contracts').update(contractData).eq('id', contractId)
-            : await supabaseClient.from('contracts').insert([contractData]);
-
-        if (error) throw error;
-        
-        alert('تم حفظ العقد بنجاح!');
-        document.getElementById('contract-modal').classList.add('hidden');
-        fetchContracts();
-
-    } catch (error) {
-        alert('حدث خطأ: ' + error.message);
-    } finally {
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'حفظ العقد';
     }
-}
+
+// نهاية الاستبدال
 
 // =================================================================
 // ===       نهاية المنطق الكامل والمصحح لنافذة إدارة العقود       ===
