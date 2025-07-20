@@ -7251,6 +7251,8 @@ if (event.target.closest('.edit-vacancy-btn')) {
 }
 
 // بداية الاستبدال
+// بداية الاستبدال
+
 if (event.target.closest('#save-vacancy-btn')) {
     const saveBtn = event.target.closest('#save-vacancy-btn');
     const id = document.getElementById('vacancy-id').value;
@@ -7265,21 +7267,22 @@ if (event.target.closest('#save-vacancy-btn')) {
             throw new Error('الرجاء اختيار وردية للشاغر.');
         }
 
-        // -- بداية الجزء المهم: تعريف وجلب منطقة العقد --
         const contractId = document.getElementById('vacancy-contract').value;
-        let contractRegion = ''; // تعريف المتغير هنا
+        let contractRegion = ''; 
         if (contractId) {
             const { data: contract } = await supabaseClient.from('contracts').select('region').eq('id', contractId).single();
-            if (contract) contractRegion = (contract.region || []).join(', ');
+            // --- بداية الجزء المصحح ---
+            // تعامل مع المنطقة كنص واحد مباشرة
+            if (contract) contractRegion = contract.region || '';
+            // --- نهاية الجزء المصحح ---
         }
-        // -- نهاية الجزء المهم --
 
         const vacancyData = {
             title: document.getElementById('vacancy-title').value,
             contract_id: contractId || null,
             project: document.getElementById('vacancy-project').value,
             location: document.getElementById('vacancy-city').value,
-            region: contractRegion, // استخدام المتغير الذي تم تعريفه
+            region: contractRegion, // استخدام المتغير النصي الصحيح
             specific_location: document.getElementById('vacancy-location-select').value,
             status: document.getElementById('vacancy-status').value,
             base_salary: parseFloat(document.getElementById('vacancy-base-salary').value) || 0,
@@ -7299,20 +7302,7 @@ if (event.target.closest('#save-vacancy-btn')) {
         
         if (error) throw error;
         
-        const totalSalary = vacancyData.base_salary + vacancyData.housing_allowance + vacancyData.transport_allowance + vacancyData.other_allowances;
-        const coverageData = {
-            project: vacancyData.project,
-            location: `${vacancyData.location} - ${vacancyData.specific_location}`,
-            start_time: shiftDetails.start_time,
-            end_time: shiftDetails.end_time,
-            coverage_pay: totalSalary,
-            reason: `أيام العمل: ${vacancyData.work_days_count} | ساعات العمل: ${vacancyData.work_hours}`,
-            status: vacancyData.status === 'open' ? 'open' : 'closed',
-            linked_vacancy_id: data.id
-        };
-        
-        await supabaseClient.from('coverage_shifts').upsert(coverageData, { onConflict: 'linked_vacancy_id' });
-
+        alert('تم حفظ الشاغر بنجاح!');
         document.getElementById('vacancy-modal').classList.add('hidden');
         loadVacancyTabData();
 
@@ -7324,6 +7314,8 @@ if (event.target.closest('#save-vacancy-btn')) {
         saveBtn.textContent = 'حفظ الشاغر';
     }
 }
+
+// نهاية الاستبدال
 // نهاية الاستبدال
 
 // عند الضغط على "حذف شاغر"
