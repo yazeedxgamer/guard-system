@@ -1412,6 +1412,8 @@ async function loadMyVisitsPage() {
 }
 // نهاية الاستبدال
 // بداية الاستبدال
+// بداية الاستبدال
+
 async function loadMySchedulePage() {
     const container = document.getElementById('my-schedule-container');
     if (!container || !currentUser) {
@@ -1419,14 +1421,12 @@ async function loadMySchedulePage() {
     }
     container.innerHTML = '<p style="text-align: center;">جاري تحميل جدولك...</p>';
 
-    // --- أولاً: التحقق من نوع الموظف لتحديد المنطق الصحيح ---
     if (currentUser.employment_status === 'بديل راحة') {
-        // --- بداية منطق "بديل الراحة" ---
+        // ... (منطق "بديل الراحة" يبقى كما هو)
         if (!currentUser.project || !currentUser.location) {
             return container.innerHTML = '<p style="text-align: center;">أنت غير معين على موقع حالياً، لا يمكن إنشاء جدول ديناميكي.</p>';
         }
 
-        // جلب كل الحراس الأساسيين في نفس الموقع مع جداولهم
         const { data: primaryGuards, error } = await supabaseClient
             .from('users')
             .select('name, job_vacancies!inner!users_vacancy_id_fkey(schedule_details)')
@@ -1450,11 +1450,7 @@ async function loadMySchedulePage() {
             if (shiftDetails && shiftDetails.days) {
                 const offDays = allWeekDays.filter(day => !shiftDetails.days.includes(day));
                 offDays.forEach(day => {
-                    reliefSchedule.push({
-                        day: day,
-                        shift: shiftDetails,
-                        covering: guard.name
-                    });
+                    reliefSchedule.push({ day: day, shift: shiftDetails, covering: guard.name });
                 });
             }
         });
@@ -1489,10 +1485,9 @@ async function loadMySchedulePage() {
             }
         }
         container.innerHTML = scheduleHtml;
-        // --- نهاية منطق "بديل الراحة" ---
 
     } else {
-        // --- بداية منطق الموظف "الأساسي" (المنطق القديم مع تحسينات) ---
+        // --- بداية منطق الموظف "الأساسي" مع الكود المحدث ---
         const { data: userWithVacancy, error } = await supabaseClient.from('users').select('*, job_vacancies!users_vacancy_id_fkey(*)').eq('id', currentUser.id).single();
 
         if (error || !userWithVacancy || !userWithVacancy.job_vacancies?.schedule_details?.[0]) {
@@ -1504,9 +1499,40 @@ async function loadMySchedulePage() {
         const workDays = (shift.days || []).map(day => dayTranslations[day] || day).join('، ');
         const offDays = Object.keys(dayTranslations).filter(day => !(shift.days || []).includes(day)).map(day => dayTranslations[day]).join('، ');
         
-        // حساب الوردية القادمة
+        // --- بداية الكود الجديد والمحسن لحساب الوردية القادمة ---
         let nextShiftText = 'لم يتم تحديد وردية قادمة.';
-        // ... (كود حساب الوردية القادمة يبقى كما هو)
+        const dayMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
+        const today = new Date();
+        const todayIndex = today.getDay();
+        const nowTime = today.getHours() * 60 + today.getMinutes(); // الوقت الحالي بالدقائق
+
+        if (shift.days && shift.days.length > 0 && shift.start_time) {
+            let foundNextShift = false;
+            // ابحث في الأيام المتبقية من هذا الأسبوع
+            for (let i = 0; i < 7; i++) {
+                const dayIndex = (todayIndex + i) % 7;
+                const dayKey = Object.keys(dayMap).find(key => dayMap[key] === dayIndex);
+                
+                if (shift.days.includes(dayKey)) {
+                    const [startHours, startMinutes] = shift.start_time.split(':').map(Number);
+                    const shiftTime = startHours * 60 + startMinutes;
+
+                    // إذا كان اليوم هو اليوم الحالي، تأكد من أن وقت الوردية لم يمض بعد
+                    if (i === 0 && nowTime > shiftTime) {
+                        continue; // الوردية لليوم قد فاتت، ابحث عن التالية
+                    }
+                    
+                    const nextShiftDate = new Date(today);
+                    nextShiftDate.setDate(today.getDate() + i);
+                    
+                    const dayName = (i === 0) ? 'اليوم' : ((i === 1) ? 'غداً' : `يوم ${dayTranslations[dayKey]}`);
+                    nextShiftText = `${dayName}، الساعة ${formatTimeAMPM(shift.start_time)}`;
+                    foundNextShift = true;
+                    break;
+                }
+            }
+        }
+        // --- نهاية الكود الجديد ---
 
         container.innerHTML = `
             <div class="contract-display" style="max-width: 700px; margin: auto;">
@@ -1518,6 +1544,7 @@ async function loadMySchedulePage() {
             </div>`;
     }
 }
+// نهاية الاستبدال
 // نهاية الاستبدال
 
 // بداية الإضافة
@@ -4259,6 +4286,8 @@ document.getElementById('contract-modal')?.addEventListener('change', (event) =>
 // --- عند الضغط على زر "تعديل العقد" (مع إصلاح عرض الورديات) ---
 // بداية الاستبدال
 
+    // بداية الاستبدال
+
     if (event.target.closest('.edit-contract-btn')) {
         const contractId = event.target.closest('.edit-contract-btn').dataset.id;
         const { data: contract, error } = await supabaseClient.from('contracts').select('*').eq('id', contractId).single();
@@ -4267,18 +4296,14 @@ document.getElementById('contract-modal')?.addEventListener('change', (event) =>
 
         const modal = document.getElementById('contract-modal');
         
-        // تعبئة البيانات الأساسية
         document.getElementById('contract-modal-title').textContent = 'تعديل العقد';
         document.getElementById('contract-id-hidden').value = contract.id;
         document.getElementById('contract-company-name').value = contract.company_name || '';
         document.getElementById('contract-end-date').value = contract.end_date || '';
 
-        // --- بداية الجزء المصحح ---
-        // تحديد المنطقة كنص واحد بدلاً من مصفوفة
         const contractRegion = contract.region || '';
         document.getElementById('contract-region-select').value = contractRegion;
-        // --- نهاية الجزء المصحح ---
-
+        
         document.getElementById('contract-cities-tags').innerHTML = (contract.city || []).map(city => `<span class="tag-item">${city}<i class="ph-bold ph-x remove-tag"></i></span>`).join('');
 
         const locationsContainer = document.getElementById('locations-container');
@@ -4290,11 +4315,7 @@ document.getElementById('contract-modal')?.addEventListener('change', (event) =>
                 const newLocationCard = document.createElement('div');
                 newLocationCard.className = 'location-entry-card';
 
-                // --- بداية الجزء المصحح الثاني ---
-                // استخدام المتغير النصي الجديد للمنطقة
                 const regionDisplay = `<input type="text" class="location-region-display" value="${contractRegion}" readonly style="background-color: #e9ecef;">`;
-                // --- نهاية الجزء المصحح الثاني ---
-                
                 const cityOptions = contractCities.map(c => `<option value="${c}" ${c === locData.city ? 'selected' : ''}>${c}</option>`).join('');
                 
                 const shiftsHtml = (locData.shifts || []).map(shiftData => {
@@ -4322,6 +4343,16 @@ document.getElementById('contract-modal')?.addEventListener('change', (event) =>
                         <div class="form-group"><label>منطقة هذا الموقع</label>${regionDisplay}</div>
                         <div class="form-group"><label>مدينة هذا الموقع</label><select class="location-city-select">${cityOptions}</select></div>
                     </div>
+                    <div class="form-grid" style="grid-template-columns: 3fr 1fr; align-items: end; margin-top: 15px;">
+                        <div class="form-group">
+                            <label>رابط الموقع (إحداثيات)</label>
+                            <input type="text" class="location-geofence-link" placeholder="مثال: 24.7111, 46.6800" value="${locData.geofence_link || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>نطاق التواجد (متر)</label>
+                            <input type="number" class="location-geofence-radius" value="${locData.geofence_radius || 200}">
+                        </div>
+                    </div>
                     <div class="shifts-container-for-location">${shiftsHtml}</div>
                     <button class="btn btn-secondary add-shift-to-card-btn"><i class="ph-bold ph-plus"></i> إضافة وردية</button>
                 `;
@@ -4331,6 +4362,8 @@ document.getElementById('contract-modal')?.addEventListener('change', (event) =>
         
         modal.classList.remove('hidden');
     }
+
+// نهاية الاستبدال
 
 // نهاية الاستبدال
 
@@ -4391,6 +4424,8 @@ if (event.target.closest('#add-location-from-input-btn')) {
 // --- عند الضغط على زر "حفظ العقد" (النسخة المصححة) ---
 // بداية الاستبدال
 
+    // بداية الاستبدال
+
     if (event.target.closest('#save-contract-btn')) {
         const saveBtn = event.target.closest('#save-contract-btn');
         saveBtn.disabled = true;
@@ -4399,7 +4434,6 @@ if (event.target.closest('#add-location-from-input-btn')) {
         try {
             const contractId = document.getElementById('contract-id-hidden').value;
             
-            // جمع بيانات المواقع والورديات
             const locationsData = Array.from(document.querySelectorAll('#locations-container .location-entry-card')).map(locCard => {
                 const shifts = Array.from(locCard.querySelectorAll('.shift-entry-card')).map(shiftCard => {
                     const days = Array.from(shiftCard.querySelectorAll('.days-selector input:checked')).map(input => input.value);
@@ -4416,13 +4450,14 @@ if (event.target.closest('#add-location-from-input-btn')) {
                     name: locCard.querySelector('h5').textContent,
                     region: locCard.querySelector('.location-region-display').value,
                     city: locCard.querySelector('.location-city-select').value,
+                    // بداية الإضافة: قراءة بيانات النطاق عند الحفظ
                     geofence_link: locCard.querySelector('.location-geofence-link').value,
                     geofence_radius: parseInt(locCard.querySelector('.location-geofence-radius').value, 10) || 200,
+                    // نهاية الإضافة
                     shifts: shifts
                 };
             });
 
-            // تجميع بيانات العقد الرئيسية
             const contractData = {
                 company_name: document.getElementById('contract-company-name').value,
                 end_date: document.getElementById('contract-end-date').value || null,
@@ -4430,16 +4465,13 @@ if (event.target.closest('#add-location-from-input-btn')) {
                 region: document.getElementById('contract-region-select').value,
                 city: Array.from(document.querySelectorAll('#contract-cities-tags .tag-item')).map(tag => tag.firstChild.textContent),
                 contract_locations: locationsData,
-                // --- بداية الإضافة: تحديد قيمة افتراضية للحالة ---
-                status: 'active' 
-                // --- نهاية الإضافة ---
+                status: 'active'
             };
 
             if (!contractData.company_name || !contractData.region) {
                 throw new Error('الرجاء تعبئة اسم العميل واختيار المنطقة.');
             }
 
-            // تنفيذ عملية الحفظ (إنشاء أو تحديث)
             const { error } = contractId
                 ? await supabaseClient.from('contracts').update(contractData).eq('id', contractId)
                 : await supabaseClient.from('contracts').insert([contractData]);
@@ -4457,6 +4489,8 @@ if (event.target.closest('#add-location-from-input-btn')) {
             saveBtn.textContent = 'حفظ العقد';
         }
     }
+
+// نهاية الاستبدال
 
 // نهاية الاستبدال
 
