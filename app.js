@@ -33,23 +33,38 @@ messaging.onMessage(payload => {
 });
 
 // ==================== بداية الدوال المساعدة للنطاق الجغرافي ====================
+// بداية الاستبدال
 
 /**
- * دالة لاستخراج الإحداثيات من رابط خرائط جوجل
- * @param {string} link - رابط خرائط جوجل
+ * دالة محسّنة لتحليل الإحداثيات من رابط خرائط جوجل أو من نص إحداثيات مباشر
+ * @param {string} input - رابط خرائط جوجل أو نص بصيغة "lat,lng"
  * @returns {object|null} - كائن يحتوي على خط الطول والعرض أو null
  */
-function getCoordsFromMapsLink(link) {
-    if (!link || typeof link !== 'string') return null;
-    const match = link.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+function parseCoordinates(input) {
+    if (!input || typeof input !== 'string') return null;
+
+    // الحالة 1: محاولة تحليل الإحداثيات المباشرة (e.g., "24.7111, 46.6800")
+    let match = input.match(/^(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)$/);
     if (match && match.length >= 3) {
         return {
             lat: parseFloat(match[1]),
             lng: parseFloat(match[2])
         };
     }
-    return null;
+
+    // الحالة 2: إذا فشلت الأولى، محاولة تحليل رابط جوجل ماب الكامل
+    match = input.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (match && match.length >= 3) {
+        return {
+            lat: parseFloat(match[1]),
+            lng: parseFloat(match[2])
+        };
+    }
+
+    return null; // إذا فشلت كل المحاولات
 }
+
+// نهاية الاستبدال
 
 /**
  * دالة لحساب المسافة بين نقطتين على الأرض (بالمتر)
@@ -3960,47 +3975,42 @@ if (exportAbsenteeBtn) {
     }
 
 // --- عند الضغط على زر "تسجيل حضور" (مع التحقق من النطاق الجغرافي) ---
+// بداية الاستبدال
+
 if (event.target.closest('#check-in-btn')) {
     const checkInBtn = event.target.closest('#check-in-btn');
     checkInBtn.disabled = true;
     checkInBtn.innerHTML = '<i class="ph-fill ph-spinner-gap animate-spin"></i> التحقق من الوردية...';
 
     try {
-        // 1. التحقق من وجود شاغر وجدول للمستخدم
         if (!currentUser.vacancy_id) throw new Error('أنت غير معين على شاغر وظيفي حالياً.');
-        const { data: vacancy, error: e1 } = await supabaseClient.from('job_vacancies').select('schedule_details, contract_id, specific_location').eq('id', currentUser.vacancy_id).single();
+        const { data: vacancy, error: e1 } = await supabaseClient.from('job_vacancies').select('contract_id, specific_location').eq('id', currentUser.vacancy_id).single();
         if (e1 || !vacancy) throw new Error('لم يتم العثور على جدول ورديات لك.');
 
-        const shift = vacancy.schedule_details?.[0];
-        if (!shift) throw new Error('تفاصيل الوردية غير مكتملة.');
-
-        // 2. التحقق من النطاق الجغرافي
         const { data: contract, error: e2 } = await supabaseClient.from('contracts').select('contract_locations').eq('id', vacancy.contract_id).single();
         if (e2 || !contract) throw new Error('لا يمكن العثور على بيانات العقد لتحديد الموقع.');
 
         const locationData = contract.contract_locations.find(loc => loc.name === vacancy.specific_location);
         if (!locationData || !locationData.geofence_link) {
-            throw new Error('لم يتم تحديد رابط الموقع في العقد. لا يمكن التحقق من النطاق.');
+            throw new Error('لم يتم تحديد إحداثيات الموقع في العقد. لا يمكن التحقق من النطاق.');
         }
 
-        const siteCoords = getCoordsFromMapsLink(locationData.geofence_link);
+        // --- هنا التعديل: استخدام الدالة الجديدة parseCoordinates ---
+        const siteCoords = parseCoordinates(locationData.geofence_link);
         const radius = locationData.geofence_radius || 200;
-        if (!siteCoords) throw new Error('رابط الموقع المحدد في العقد غير صالح.');
+        if (!siteCoords) throw new Error('إحداثيات الموقع المحددة في العقد غير صالحة.');
 
         checkInBtn.innerHTML = '<i class="ph-fill ph-spinner-gap animate-spin"></i> جاري تحديد موقعك...';
         
-        // 3. طلب الموقع الحالي للحارس
         navigator.geolocation.getCurrentPosition(async (position) => {
             try {
                 const guardCoords = { lat: position.coords.latitude, lng: position.coords.longitude };
                 const distance = calculateDistance(siteCoords, guardCoords);
 
-                // 4. المقارنة واتخاذ القرار
                 if (distance > radius) {
                     throw new Error(`أنت خارج نطاق العمل المسموح به. المسافة الحالية: ${Math.round(distance)} متر، والنطاق المسموح به: ${radius} متر.`);
                 }
 
-                // 5. إذا كان الحارس داخل النطاق، يتم تسجيل الحضور
                 const { error: insertError } = await supabaseClient.from('attendance').insert({
                     guard_id: currentUser.id,
                     guard_name: currentUser.name,
@@ -4033,6 +4043,8 @@ if (event.target.closest('#check-in-btn')) {
         checkInBtn.innerHTML = 'تسجيل حضور';
     }
 }
+
+// نهاية الاستبدال
 
 
 // --- منطق أزرار تعيين التغطية لمدير العمليات ---
