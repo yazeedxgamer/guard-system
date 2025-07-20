@@ -5662,6 +5662,8 @@ if (hrCoverageBtn) {
 // نهاية الاستبدال
 // ========= بداية الإضافة (أضف هذا في نهاية الملف) =========
 
+// بداية الاستبدال
+
 /**
  * دالة متكاملة لتهيئة وتسجيل الإشعارات بشكل آمن ومستقر
  * @param {HTMLButtonElement} btn - الزر الذي تم الضغط عليه لتحديث حالته
@@ -5675,29 +5677,22 @@ async function setupPushNotifications(btn) {
     }
 
     try {
-        // الخطوة 1: طلب الإذن من المستخدم بشكل صريح أولاً
         console.log('طلب الإذن من المستخدم...');
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
             throw new Error('تم رفض إذن الإشعارات.');
         }
 
-        // الخطوة 2: تسجيل ملف service worker والتأكد من أنه جاهز
-        console.log('تسجيل Service Worker...');
-        const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        console.log('Service Worker مسجل وجاهز:', swRegistration);
+        // --- تم حذف كود تسجيل الـ Service Worker المكرر من هنا ---
 
-        // الخطوة 3: طلب التوكن مع تمرير ملف التسجيل الجاهز
         console.log('طلب توكن FCM...');
         const VAPID_KEY = 'BNPoFv0y_LPl6ZInfQLVOaG9LsxOxmQoKEBo9o0TfhL-y80IdC8eU1G4N1U3fL9qi1_TtqPQ5bqN0pi-uIwjMwQ';
-        const fcmToken = await messaging.getToken({
-            vapidKey: VAPID_KEY,
-            serviceWorkerRegistration: swRegistration,
-        });
+        
+        // --- تم تبسيط استدعاء getToken ليعتمد على التسجيل الموجود مسبقاً ---
+        const fcmToken = await messaging.getToken({ vapidKey: VAPID_KEY });
 
         if (fcmToken) {
             console.log('تم الحصول على التوكن بنجاح:', fcmToken);
-            // الخطوة 4: حفظ التوكن في قاعدة البيانات
             await supabaseClient
                 .from('users')
                 .update({ fcm_token: fcmToken })
@@ -5712,9 +5707,12 @@ async function setupPushNotifications(btn) {
     } catch (err) {
         console.error('حدث خطأ أثناء إعداد الإشعارات:', err);
         alert(`فشل تفعيل الإشعارات: ${err.message}`);
-        btn.disabled = false; // إعادة تفعيل الزر عند حدوث خطأ
+    } finally {
+        btn.disabled = false; // إعادة تفعيل الزر دائماً
     }
 }
+
+// نهاية الاستبدال
 // ========= نهاية الإضافة =========
 
 // بداية الإضافة
