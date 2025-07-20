@@ -6333,81 +6333,110 @@ if (requestActionBtn) {
     }
 // نهاية الإضافة
     // بداية الإضافة: منطق تعديل بيانات الموظف
+    // بداية الاستبدال
+
     const editEmployeeBtn = event.target.closest('.edit-employee-btn');
     if (editEmployeeBtn) {
         const userId = editEmployeeBtn.dataset.id;
         if (!userId) return;
-
-        // 1. جلب بيانات الموظف الكاملة
-        const { data: employee, error } = await supabaseClient
-            .from('users')
-            .select('*')
-            .eq('id', userId)
-            .single();
-
+    
+        const { data: employee, error } = await supabaseClient.from('users').select('*, job_vacancies!users_vacancy_id_fkey(*)').eq('id', userId).single();
         if (error || !employee) {
+            console.error('Employee fetch error:', error);
             return alert('حدث خطأ في جلب بيانات الموظف.');
         }
-
+    
         const modal = document.getElementById('employee-modal');
-
-        // 2. تعيين وضع التعديل وملء الحقول المخفية
+        
+        // تعبئة كل الحقول الأساسية في النموذج
         document.getElementById('employee-modal-title').textContent = 'تعديل بيانات الموظف';
-        document.getElementById('employee-creation-mode').value = 'update';
         document.getElementById('employee-id').value = employee.id;
         document.getElementById('employee-auth-id').value = employee.auth_user_id;
-
-        // 3. تعبئة النموذج ببيانات الموظف
+        document.getElementById('employee-creation-mode').value = 'update';
         document.getElementById('employee-name').value = employee.name || '';
         document.getElementById('employee-id-number').value = employee.id_number || '';
         document.getElementById('employee-phone').value = employee.phone || '';
         document.getElementById('employee-role').value = employee.role || 'حارس أمن';
-        document.getElementById('employee-iban').value = employee.iban || '';
-        document.getElementById('employee-insurance').value = employee.insurance_status || 'غير مسجل';
-        document.getElementById('employee-insurance-amount').value = employee.insurance_deduction_amount || 0;
-// وأضف هذا الشرط لإظهار الحقل إذا كان الموظف مسجلاً
-if (employee.insurance_status === 'مسجل') {
-    document.getElementById('insurance-amount-group').classList.remove('hidden');
-} else {
-    document.getElementById('insurance-amount-group').classList.add('hidden');
-}
-        document.getElementById('employee-account-status').value = employee.status || 'active';
-        document.getElementById('employee-type').value = employee.employee_type || 'اساسي';
-        document.getElementById('employee-status').value = employee.employment_status || 'نشط';
-        
-        // اترك حقل كلمة المرور فارغاً للتغيير فقط
+        document.getElementById('employee-start-date').value = employee.start_of_work_date;
         document.getElementById('employee-password').value = '';
         document.getElementById('employee-password').placeholder = 'اتركه فارغاً لعدم التغيير';
-        
-        // لا تسمح بتعديل رقم الهوية
+        document.getElementById('employee-iban').value = employee.iban || '';
+        document.getElementById('employee-bank-name').value = employee.bank_name || '';
+        document.getElementById('employee-insurance').value = employee.insurance_status || 'غير مسجل';
+        document.getElementById('employee-insurance-amount').value = employee.insurance_deduction_amount || 0;
+        document.getElementById('employee-status').value = employee.employment_status || 'اساسي';
         document.getElementById('employee-id-number').disabled = true;
-
-        // 4. جلب قوائم العقود والشواغر وتحديد الخيار الحالي
-        const contractSelect = document.getElementById('employee-contract');
+    
+        // تعبئة بيانات التسكين الأولية
+        document.getElementById('employee-project-display').value = employee.project || '';
+        document.getElementById('employee-location-display').value = employee.location || '';
+        document.getElementById('employee-region').value = employee.region || '';
+        document.getElementById('employee-city').value = employee.city || '';
+    
+        const shiftDisplay = document.getElementById('employee-shift-display');
+        const assignedVacancy = employee.job_vacancies;
+        if (employee.employment_status === 'بديل راحة') {
+            shiftDisplay.value = 'جدول ديناميكي (يغطي أيام الراحة)';
+        } else if (assignedVacancy && assignedVacancy.schedule_details?.[0]) {
+            const shift = assignedVacancy.schedule_details[0];
+            shiftDisplay.value = `${shift.name || 'وردية'} (من ${formatTimeAMPM(shift.start_time)} إلى ${formatTimeAMPM(shift.end_time)})`;
+        } else {
+            shiftDisplay.value = 'لا توجد وردية محددة';
+        }
+    
+        // إظهار وتعبئة حقول الصلاحيات بناءً على الدور
+        const role = employee.role;
+        const assignmentGroup = document.getElementById('manager-assignment-group');
+        const regionGroup = document.getElementById('assign-region-group');
+        const projectGroup = document.getElementById('assign-project-group');
+        
+        assignmentGroup.classList.add('hidden');
+        regionGroup.classList.add('hidden');
+        projectGroup.classList.add('hidden');
+    
+        if (role === 'ادارة العمليات') {
+            assignmentGroup.classList.remove('hidden');
+            regionGroup.classList.remove('hidden');
+            document.getElementById('assign-region-select').value = employee.region || '';
+        } else if (role === 'مشرف') {
+            assignmentGroup.classList.remove('hidden');
+            projectGroup.classList.remove('hidden');
+            const projectSelect = document.getElementById('assign-project-select');
+            projectSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+            const { data: contractsForSupervisor } = await supabaseClient.from('contracts').select('company_name');
+            const projectNames = [...new Set(contractsForSupervisor.map(c => c.company_name))];
+            projectSelect.innerHTML = '<option value="">-- اختر المشروع --</option>';
+            projectSelect.innerHTML += projectNames.map(p => `<option value="${p}">${p}</option>`).join('');
+            projectSelect.value = employee.project || '';
+        }
+    
         const vacancySelect = document.getElementById('employee-vacancy');
-        contractSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+        const contractSelect = document.getElementById('employee-contract');
         vacancySelect.innerHTML = '<option value="">جاري التحميل...</option>';
-
-        const [{ data: contracts }, { data: vacancies }] = await Promise.all([
-            supabaseClient.from('contracts').select('id, company_name').eq('status', 'active'),
-            supabaseClient.from('job_vacancies').select('id, project, specific_location').eq('status', 'open')
-        ]);
-
+        contractSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+    
+        const { data: openVacancies } = await supabaseClient.from('job_vacancies').select('id, project, specific_location').eq('status', 'open');
+        let allRelevantVacancies = openVacancies || [];
+        if (assignedVacancy && !allRelevantVacancies.some(v => v.id === assignedVacancy.id)) {
+            allRelevantVacancies.push(assignedVacancy);
+        }
+        
+        const { data: contracts } = await supabaseClient.from('contracts').select('id, company_name').eq('status', 'active');
+    
         contractSelect.innerHTML = '<option value="">غير تابع لعقد</option>';
         if (contracts) contractSelect.innerHTML += contracts.map(c => `<option value="${c.id}">${c.company_name}</option>`).join('');
-        
-        vacancySelect.innerHTML = '<option value="">غير مرتبط بشاغر</option>';
-        if (vacancies) {
-            vacancySelect.innerHTML += vacancies.map(v => `<option value="${v.id}">${v.project} - ${v.specific_location || 'موقع عام'}</option>`).join('');
-        }
-
-        // تحديد القيم الحالية للموظف
         contractSelect.value = employee.contract_id || '';
+    
+        vacancySelect.innerHTML = '<option value="">غير مرتبط بشاغر</option>';
+        if (allRelevantVacancies.length > 0) {
+            vacancySelect.innerHTML += allRelevantVacancies.map(v => `<option value="${v.id}">${v.project} - ${v.specific_location || 'موقع عام'}</option>`).join('');
+        }
         vacancySelect.value = employee.vacancy_id || '';
-
-        // 5. إظهار النافذة
+        
         modal.classList.remove('hidden');
     }
+
+// نهاية الاستبدال
 // نهاية الإضافة
 
     // --- منطق عرض تفاصيل الشاغر لمدير العمليات ---
