@@ -4257,77 +4257,82 @@ document.getElementById('contract-modal')?.addEventListener('change', (event) =>
 // =================================================================
 
 // --- عند الضغط على زر "تعديل العقد" (مع إصلاح عرض الورديات) ---
-if (event.target.closest('.edit-contract-btn')) {
-    const contractId = event.target.closest('.edit-contract-btn').dataset.id;
-    const { data: contract, error } = await supabaseClient.from('contracts').select('*').eq('id', contractId).single();
+// بداية الاستبدال
 
-    if (error || !contract) { return alert('حدث خطأ في جلب بيانات العقد.'); }
+    if (event.target.closest('.edit-contract-btn')) {
+        const contractId = event.target.closest('.edit-contract-btn').dataset.id;
+        const { data: contract, error } = await supabaseClient.from('contracts').select('*').eq('id', contractId).single();
 
-    const modal = document.getElementById('contract-modal');
-    
-    // تعبئة البيانات الأساسية
-    document.getElementById('contract-modal-title').textContent = 'تعديل العقد';
-    document.getElementById('contract-id-hidden').value = contract.id;
-    document.getElementById('contract-company-name').value = contract.company_name || '';
-    document.getElementById('contract-end-date').value = contract.end_date || '';
+        if (error || !contract) { return alert('حدث خطأ في جلب بيانات العقد.'); }
 
-    // تعبئة المناطق والمدن
-    document.querySelectorAll('#contract-regions-tags .region-tag').forEach(tag => {
-        tag.classList.toggle('selected', (contract.region || []).includes(tag.dataset.value));
-    });
-    document.getElementById('contract-cities-tags').innerHTML = (contract.city || []).map(city => `<span class="tag-item">${city}<i class="ph-bold ph-x remove-tag"></i></span>`).join('');
+        const modal = document.getElementById('contract-modal');
+        
+        // تعبئة البيانات الأساسية
+        document.getElementById('contract-modal-title').textContent = 'تعديل العقد';
+        document.getElementById('contract-id-hidden').value = contract.id;
+        document.getElementById('contract-company-name').value = contract.company_name || '';
+        document.getElementById('contract-end-date').value = contract.end_date || '';
 
-    // --- بداية الجزء المصحح لإعادة بناء المواقع والورديات ---
-    const locationsContainer = document.getElementById('locations-container');
-    locationsContainer.innerHTML = '';
-    if (contract.contract_locations && Array.isArray(contract.contract_locations)) {
-        const contractRegions = contract.region || [];
-        const contractCities = contract.city || [];
+        // --- بداية الجزء المصحح ---
+        // تحديد المنطقة كنص واحد بدلاً من مصفوفة
+        const contractRegion = contract.region || '';
+        document.getElementById('contract-region-select').value = contractRegion;
+        // --- نهاية الجزء المصحح ---
 
-        contract.contract_locations.forEach(locData => {
-            const newLocationCard = document.createElement('div');
-            newLocationCard.className = 'location-entry-card';
+        document.getElementById('contract-cities-tags').innerHTML = (contract.city || []).map(city => `<span class="tag-item">${city}<i class="ph-bold ph-x remove-tag"></i></span>`).join('');
 
-            const regionOptions = contractRegions.map(r => `<option value="${r}" ${r === locData.region ? 'selected' : ''}>${r}</option>`).join('');
-            const cityOptions = contractCities.map(c => `<option value="${c}" ${c === locData.city ? 'selected' : ''}>${c}</option>`).join('');
-            
-            // --- هنا الكود الجديد الذي يعيد بناء الورديات ---
-            const shiftsHtml = (locData.shifts || []).map(shiftData => {
-                const daysHtml = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day => `<label><input type="checkbox" value="${day}" ${(shiftData.days || []).includes(day) ? 'checked' : ''}> ${day.replace('Sun','الأحد').replace('Mon','الاثنين').replace('Tue','الثلاثاء').replace('Wed','الأربعاء').replace('Thu','الخميس').replace('Fri','الجمعة').replace('Sat','السبت')}</label>`).join('');
-                return `
-                    <div class="shift-entry-card">
-                        <button class="delete-btn delete-shift-btn" style="position: static; float: left;"><i class="ph-bold ph-x"></i></button>
-                        <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
-                            <div class="form-group"><label>مسمى الوردية</label><input type="text" class="shift-name" value="${shiftData.name || ''}"></div>
-                            <div class="form-group"><label>عدد الحراس</label><input type="number" class="shift-guards-count" value="${shiftData.guards_count || 1}"></div>
-                            <div class="form-group"><label>من ساعة</label><input type="time" class="shift-start-time" value="${shiftData.start_time || ''}"></div>
-                            <div class="form-group"><label>إلى ساعة</label><input type="time" class="shift-end-time" value="${shiftData.end_time || ''}"></div>
+        const locationsContainer = document.getElementById('locations-container');
+        locationsContainer.innerHTML = '';
+        if (contract.contract_locations && Array.isArray(contract.contract_locations)) {
+            const contractCities = contract.city || [];
+
+            contract.contract_locations.forEach(locData => {
+                const newLocationCard = document.createElement('div');
+                newLocationCard.className = 'location-entry-card';
+
+                // --- بداية الجزء المصحح الثاني ---
+                // استخدام المتغير النصي الجديد للمنطقة
+                const regionDisplay = `<input type="text" class="location-region-display" value="${contractRegion}" readonly style="background-color: #e9ecef;">`;
+                // --- نهاية الجزء المصحح الثاني ---
+                
+                const cityOptions = contractCities.map(c => `<option value="${c}" ${c === locData.city ? 'selected' : ''}>${c}</option>`).join('');
+                
+                const shiftsHtml = (locData.shifts || []).map(shiftData => {
+                    const daysHtml = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day => `<label><input type="checkbox" value="${day}" ${(shiftData.days || []).includes(day) ? 'checked' : ''}> ${day.replace('Sun','الأحد').replace('Mon','الاثنين').replace('Tue','الثلاثاء').replace('Wed','الأربعاء').replace('Thu','الخميس').replace('Fri','الجمعة').replace('Sat','السبت')}</label>`).join('');
+                    return `
+                        <div class="shift-entry-card">
+                            <button class="delete-btn delete-shift-btn" style="position: static; float: left;"><i class="ph-bold ph-x"></i></button>
+                            <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
+                                <div class="form-group"><label>مسمى الوردية</label><input type="text" class="shift-name" value="${shiftData.name || ''}"></div>
+                                <div class="form-group"><label>عدد الحراس</label><input type="number" class="shift-guards-count" value="${shiftData.guards_count || 1}"></div>
+                                <div class="form-group"><label>من ساعة</label><input type="time" class="shift-start-time" value="${shiftData.start_time || ''}"></div>
+                                <div class="form-group"><label>إلى ساعة</label><input type="time" class="shift-end-time" value="${shiftData.end_time || ''}"></div>
+                            </div>
+                            <div class="form-grid" style="grid-template-columns: 1fr 3fr;">
+                                <div class="form-group"><label>ساعات العمل</label><input type="number" class="shift-work-hours" value="${shiftData.work_hours || 0}" readonly style="background-color: #e9ecef;"></div>
+                                <div class="form-group"><label>أيام العمل</label><div class="days-selector">${daysHtml}</div></div>
+                            </div>
                         </div>
-                        <div class="form-grid" style="grid-template-columns: 1fr 3fr;">
-                            <div class="form-group"><label>ساعات العمل</label><input type="number" class="shift-work-hours" value="${shiftData.work_hours || 0}" readonly style="background-color: #e9ecef;"></div>
-                            <div class="form-group"><label>أيام العمل</label><div class="days-selector">${daysHtml}</div></div>
-                        </div>
+                    `;
+                }).join('');
+
+                newLocationCard.innerHTML = `
+                    <div class="location-header"><h5>${locData.name}</h5><button class="delete-btn delete-location-card-btn"><i class="ph-bold ph-trash"></i></button></div>
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr; align-items: end;">
+                        <div class="form-group"><label>منطقة هذا الموقع</label>${regionDisplay}</div>
+                        <div class="form-group"><label>مدينة هذا الموقع</label><select class="location-city-select">${cityOptions}</select></div>
                     </div>
+                    <div class="shifts-container-for-location">${shiftsHtml}</div>
+                    <button class="btn btn-secondary add-shift-to-card-btn"><i class="ph-bold ph-plus"></i> إضافة وردية</button>
                 `;
-            }).join('');
-            // --- نهاية كود بناء الورديات ---
-
-            newLocationCard.innerHTML = `
-                <div class="location-header"><h5>${locData.name}</h5><button class="delete-btn delete-location-card-btn"><i class="ph-bold ph-trash"></i></button></div>
-                <div class="form-grid" style="grid-template-columns: 1fr 1fr; align-items: end;">
-                    <div class="form-group"><label>منطقة هذا الموقع</label><select class="location-region-select">${regionOptions}</select></div>
-                    <div class="form-group"><label>مدينة هذا الموقع</label><select class="location-city-select">${cityOptions}</select></div>
-                </div>
-                <div class="shifts-container-for-location">${shiftsHtml}</div>
-                <button class="btn btn-secondary add-shift-to-card-btn"><i class="ph-bold ph-plus"></i> إضافة وردية</button>
-            `;
-            locationsContainer.appendChild(newLocationCard);
-        });
+                locationsContainer.appendChild(newLocationCard);
+            });
+        }
+        
+        modal.classList.remove('hidden');
     }
-    // --- نهاية الجزء المصحح ---
-    
-    modal.classList.remove('hidden');
-}
+
+// نهاية الاستبدال
 
 // --- عند الضغط على زر "إضافة موقع" (مع حقول النطاق الجغرافي) ---
 if (event.target.closest('#add-location-from-input-btn')) {
