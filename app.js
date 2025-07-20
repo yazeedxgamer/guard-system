@@ -5665,11 +5665,10 @@ if (hrCoverageBtn) {
 // بداية الاستبدال
 
 /**
- * دالة متكاملة لتهيئة وتسجيل الإشعارات بشكل آمن ومستقر
+ * دالة متكاملة لتهيئة وتسجيل الإشعارات (النسخة النهائية والمستقرة)
  * @param {HTMLButtonElement} btn - الزر الذي تم الضغط عليه لتحديث حالته
  */
 async function setupPushNotifications(btn) {
-    // التأكد من أن المتصفح يدعم الإشعارات
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         alert('المتصفح لا يدعم الإشعارات.');
         btn.disabled = false;
@@ -5683,13 +5682,18 @@ async function setupPushNotifications(btn) {
             throw new Error('تم رفض إذن الإشعارات.');
         }
 
-        // --- تم حذف كود تسجيل الـ Service Worker المكرر من هنا ---
-
+        // --- الخطوة الجديدة: انتظر حتى يصبح الـ Service Worker نشطاً ---
+        console.log('الانتظار حتى يصبح ملف الإشعارات جاهزاً...');
+        const readySW = await navigator.serviceWorker.ready;
+        console.log('ملف الإشعارات جاهز ونشط!', readySW);
+        
         console.log('طلب توكن FCM...');
         const VAPID_KEY = 'BNPoFv0y_LPl6ZInfQLVOaG9LsxOxmQoKEBo9o0TfhL-y80IdC8eU1G4N1U3fL9qi1_TtqPQ5bqN0pi-uIwjMwQ';
         
-        // --- تم تبسيط استدعاء getToken ليعتمد على التسجيل الموجود مسبقاً ---
-        const fcmToken = await messaging.getToken({ vapidKey: VAPID_KEY });
+        const fcmToken = await messaging.getToken({ 
+            vapidKey: VAPID_KEY,
+            serviceWorkerRegistration: readySW // نمرر له النسخة الجاهزة
+        });
 
         if (fcmToken) {
             console.log('تم الحصول على التوكن بنجاح:', fcmToken);
@@ -5699,16 +5703,17 @@ async function setupPushNotifications(btn) {
                 .eq('id', currentUser.id);
             
             alert('تم تفعيل الإشعارات بنجاح!');
-            btn.style.color = '#22c55e'; // تغيير لون الأيقونة للون الأخضر
+            btn.style.color = '#22c55e';
         } else {
              throw new Error('لم يتمكن من الحصول على توكن.');
         }
 
     } catch (err) {
         console.error('حدث خطأ أثناء إعداد الإشعارات:', err);
-        alert(`فشل تفعيل الإشعارات: ${err.message}`);
+        // عرض الرسالة التي ظهرت في الصورة للمستخدم
+        alert(`فشل تفعيل الإشعارات:\n${err.message}`);
     } finally {
-        btn.disabled = false; // إعادة تفعيل الزر دائماً
+        btn.disabled = false;
     }
 }
 
