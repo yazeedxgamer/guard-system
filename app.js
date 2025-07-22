@@ -3445,7 +3445,7 @@ async function generatePayroll() {
                 const totalWorkHours = actualWorkDays * (shift.work_hours || 8);
                 const permissionRecords = permissionRequests.filter(req => req.user_id === emp.id);
                 const withdrawalRecords = attendanceRecords.filter(att => att.guard_id === emp.id && att.status === 'انسحاب');
-                constprojectName = Array.isArray(emp.project) ? emp.project.join(', ') : (emp.project || '');
+                const projectName = Array.isArray(emp.project) ? emp.project.join(', ') : (emp.project || '');
 
                 const absenceDeduction = (absentDays * 2) * dailyRate;
                 const latenessDeduction = (totalLatenessMinutes * (hourlyRate / 60));
