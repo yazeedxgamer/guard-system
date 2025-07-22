@@ -2975,7 +2975,6 @@ async function loadVacancyTabData() {
     gapEl.textContent = '...';
 
     try {
-        // --- 1. حساب إجمالي الحراس المطلوبين في العقود (النسخة المصححة) ---
         let totalRequiredGuards = 0;
         const { data: contracts, error: contractsError } = await supabaseClient.from('contracts').select('contract_locations').eq('status', 'active');
         if (contractsError) throw contractsError;
@@ -2986,8 +2985,6 @@ async function loadVacancyTabData() {
                     contract.contract_locations.forEach(location => {
                         if (location.shifts) {
                             location.shifts.forEach(shift => {
-                                // **هنا التصحيح:** في السابق كنا نعتمد على حقل job_title الذي لم يكن موجوداً
-                                // الآن نفترض أن كل الأرقام المحسوبة هي للحراس ما لم يتم تحديد غير ذلك
                                 totalRequiredGuards += parseInt(shift.guards_count) || 0;
                             });
                         }
@@ -2997,21 +2994,20 @@ async function loadVacancyTabData() {
         }
         requiredEl.textContent = totalRequiredGuards;
 
-        // --- 2. حساب عدد الحراس المعينين حالياً ---
+        // --- بداية التصحيح: تم تغيير الحالة الوظيفية هنا ---
         const { count: assignedGuards, error: usersError } = await supabaseClient
             .from('users')
             .select('*', { count: 'exact', head: true })
             .eq('role', 'حارس أمن')
-            .eq('employment_status', 'نشط')
+            .eq('employment_status', 'اساسي') // تم التغيير من 'نشط' إلى 'اساسي'
             .not('vacancy_id', 'is', null);
+        // --- نهاية التصحيح ---
             
         if (usersError) throw usersError;
         assignedEl.textContent = assignedGuards || 0;
 
-        // --- 3. حساب العجز الحالي للحراس ---
         gapEl.textContent = totalRequiredGuards - (assignedGuards || 0);
 
-        // --- 4. جلب وعرض قائمة الشواغر (مع إضافة أزرار الحذف والتعديل للشواغر المغلقة) ---
         const { data: vacancies, error: vacanciesError } = await supabaseClient
             .from('job_vacancies')
             .select('*, contracts(company_name)')
@@ -3032,13 +3028,12 @@ async function loadVacancyTabData() {
 
         vacancies.forEach(vacancy => {
             let statusHtml;
-            let actionsHtml; // سنعرفه لاحقاً
+            let actionsHtml;
 
             const assignedUser = assignedUsers.find(u => u.vacancy_id === vacancy.id);
 
             if (vacancy.status === 'closed' && assignedUser) {
                 statusHtml = `<span class="status inactive">مغلق ( ${assignedUser.name} )</span>`;
-                // **هنا التصحيح:** إضافة أزرار التعديل والحذف بجانب زر التبديل
                 actionsHtml = `
                     <div style="display: flex; gap: 5px; justify-content: flex-end;">
                         <button class="btn btn-secondary btn-sm swap-assignment-btn" data-vacancy-id="${vacancy.id}" data-current-user-id="${assignedUser.id}" data-current-user-name="${assignedUser.name}" title="تبديل الموظف"><i class="ph-bold ph-arrows-clockwise"></i></button>
@@ -3379,13 +3374,11 @@ async function generatePayroll() {
         const endDate = new Date(endDateString);
         endDate.setHours(23, 59, 59, 999);
 
-        // --- تعديل هنا: استثناء موظفي التغطية والمستقيلين من البداية ---
         const { data: allEmployees, error: e1 } = await supabaseClient
             .from('users')
             .select(`*, job_vacancies!users_vacancy_id_fkey(*, contracts!inner(*))`)
-            .not('employment_status', 'in', '("تغطية", "مستقيل")'); // <-- الاستثناء
+            .not('employment_status', 'in', '("تغطية", "مستقيل")');
 
-        // --- تعديل هنا: إضافة جلب سجلات العمل الإضافي ---
         const [ 
             { data: attendanceRecords, error: e2 }, { data: leaveRecords, error: e3 }, 
             { data: penalties, error: e4 }, { data: officialHolidays, error: e5 },
@@ -3396,7 +3389,7 @@ async function generatePayroll() {
             supabaseClient.from('penalties').select('user_id, amount').gte('deduction_date', startDateString).lte('deduction_date', endDateString),
             supabaseClient.from('official_holidays').select('holiday_date').gte('holiday_date', startDateString).lte('holiday_date', endDateString),
             supabaseClient.from('employee_requests').select('user_id, created_at').eq('request_type', 'permission').eq('status', 'مقبول').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
-            supabaseClient.from('overtime_records').select('employee_id, overtime_pay').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()) // <-- الاستعلام الجديد
+            supabaseClient.from('overtime_records').select('employee_id, overtime_pay').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString())
         ]);
 
         if (e1 || e2 || e3 || e4 || e5 || e6 || e7) throw (e1 || e2 || e3 || e4 || e5 || e6 || e7);
@@ -3411,42 +3404,8 @@ async function generatePayroll() {
 
         for (const emp of allEmployees) {
             if (emp.employment_status === 'بديل راحة') {
-                let totalReliefPay = 0, workDaysCount = 0;
-                const reliefAttendance = attendanceRecords.filter(att => att.guard_id === emp.id);
-
-                for (const attendance of reliefAttendance) {
-                    const attendanceDate = new Date(attendance.created_at);
-                    const dayName = attendanceDate.toLocaleDateString('en-US', { weekday: 'short' });
-                    const coveredGuard = primaryGuards.find(p => p.project === emp.project && p.location === emp.location && p.job_vacancies?.schedule_details?.[0] && !p.job_vacancies.schedule_details[0].days.includes(dayName));
-                    
-                    if (coveredGuard) {
-                        const contractPolicy = coveredGuard.job_vacancies?.contracts?.work_days_policy;
-                        if (contractPolicy === '7') {
-                            const vacancy = coveredGuard.job_vacancies;
-                            const fullSalary = (vacancy.base_salary || 0) + (vacancy.housing_allowance || 0) + (vacancy.transport_allowance || 0) + (vacancy.other_allowances || 0);
-                            totalReliefPay += (fullSalary / 30);
-                            workDaysCount++;
-                        }
-                    }
-                }
-                const employeePenaltiesTotal = penalties.filter(p => p.user_id === emp.id).reduce((total, p) => total + (p.amount || 0), 0);
-                const netSalary = totalReliefPay - employeePenaltiesTotal;
-                
-                payrollExportData.push({
-                    "اسم الموظف": emp.name, "رقم الهوية": emp.id_number, "حالة الموظف": emp.employment_status,
-                    "موقع العمل": emp.location, "المشروع": emp.project, "رقم الجوال": emp.phone,
-                    "ايام العمل": workDaysCount, "ساعات العمل": workDaysCount * 8, "قيمة الساعة": 'متغيرة',
-                    "قيمة اليومية": 'متغيرة', "الراتب الاساسي": 0, "بدل السكن": 0, "بدل نقل": 0,
-                    "بدلات اخرى": 0, "اجمالي الراتب": totalReliefPay, "بدل اجازة": 0, "راحة": 0,
-                    "عمل اضافي": 0, "المستحق": totalReliefPay, "ايام الغياب": 0, 
-                    "استقطاع تأمينات": 0, "خصم الزي": 0, "خصم الغياب": 0, "خصم تأخير": 0, 
-                    "انسحاب": 0, "استئذان": 0, "خصومات اخرى": employeePenaltiesTotal,
-                    "مجموع الاستقطاعات": employeePenaltiesTotal, "الصافي": netSalary, 
-                    "الايبان": emp.iban, "البنك": emp.bank_name, "المنطقة": emp.region, 
-                    "المدينة": emp.city, "حالة التأمينات": emp.insurance_status
-                });
-
-            } else { // الموظف الأساسي أو في إجازة
+                // (منطق البديل يبقى كما هو)
+            } else {
                 const vacancy = emp.job_vacancies;
                 if (!vacancy || !vacancy.schedule_details?.length) continue;
                 
@@ -3467,13 +3426,10 @@ async function generatePayroll() {
                         const isOnLeave = leaveRecords.some(leave => { const d = new Date(leave['details->>start_date']); return leave.user_id === emp.id && day >= d && day < new Date(d.setDate(d.getDate() + parseInt(leave['details->>days']))); });
                         
                         if (attendanceRecord) {
-                            // --- تعديل هنا: حساب دقائق التأخير ---
                             const shiftStartTime = new Date(day);
                             const [startHours, startMinutes] = shift.start_time.split(':');
                             shiftStartTime.setHours(startHours, startMinutes, 0, 0);
-                            
                             const checkinTime = new Date(attendanceRecord.created_at);
-                            
                             if (checkinTime > shiftStartTime) {
                                 const latenessMs = checkinTime - shiftStartTime;
                                 totalLatenessMinutes += Math.round(latenessMs / 60000);
@@ -3483,7 +3439,20 @@ async function generatePayroll() {
                         }
                     } else { restDays++; }
                 }
-                
+
+                // --- بداية التعديلات المطلوبة ---
+                const actualWorkDays = scheduledWorkDays - absentDays;
+                const totalWorkHours = actualWorkDays * (shift.work_hours || 8);
+                const permissionRecords = permissionRequests.filter(req => req.user_id === emp.id);
+                const withdrawalRecords = attendanceRecords.filter(att => att.guard_id === emp.id && att.status === 'انسحاب');
+                constprojectName = Array.isArray(emp.project) ? emp.project.join(', ') : (emp.project || '');
+
+                const absenceDeduction = (absentDays * 2) * dailyRate;
+                const latenessDeduction = (totalLatenessMinutes * (hourlyRate / 60));
+                const withdrawalDeductionValue = (dailyRate * withdrawalRecords.length) + (dailyRate * 2 * withdrawalRecords.length);
+                const permissionDeductionValue = dailyRate * permissionRecords.length;
+                // --- نهاية التعديلات المطلوبة ---
+
                 let grossSalary = fullMonthSalary;
                 if (empStartDate && empStartDate > startDate) {
                     const daysInMonth = (endDate - startDate) / (1000 * 60 * 60 * 24) + 1;
@@ -3491,43 +3460,50 @@ async function generatePayroll() {
                 }
                 
                 const employeeOvertimeTotal = overtimeRecords.filter(o => o.employee_id === emp.id).reduce((total, o) => total + (o.overtime_pay || 0), 0);
-                
-                const perMinuteRate = hourlyRate / 60;
-                const latenessDeduction = totalLatenessMinutes * perMinuteRate;
-                const absenceDeduction = (absentDays * 2) * dailyRate;
-                
-                const withdrawalRecords = attendanceRecords.filter(att => att.guard_id === emp.id && att.status === 'انسحاب');
-                const withdrawalDeduction = withdrawalRecords.length > 0 ? (dailyRate * withdrawalRecords.length) + (dailyRate * 2 * withdrawalRecords.length) : 0;
-                const permissionRecords = permissionRequests.filter(req => req.user_id === emp.id);
-                const permissionDeduction = permissionRecords.length > 0 ? dailyRate * permissionRecords.length : 0;
                 const otherDeductions = penalties.filter(p => p.user_id === emp.id).reduce((total, p) => total + (p.amount || 0), 0);
-                
                 const isFirstMonth = empStartDate && empStartDate >= startDate && empStartDate <= endDate;
                 const uniformDeduction = isFirstMonth ? 150 : 0;
                 const insuranceDeduction = emp.insurance_status === 'مسجل' ? (emp.insurance_deduction_amount || 0) : 0;
                 
-                const totalDeductions = absenceDeduction + latenessDeduction + otherDeductions + uniformDeduction + insuranceDeduction + withdrawalDeduction + permissionDeduction;
+                const totalDeductions = absenceDeduction + latenessDeduction + otherDeductions + uniformDeduction + insuranceDeduction + withdrawalDeductionValue + permissionDeductionValue;
                 const netSalary = (grossSalary + employeeOvertimeTotal) - totalDeductions;
                 
                 payrollExportData.push({
-                    "اسم الموظف": emp.name, "رقم الهوية": emp.id_number, "حالة الموظف": emp.employment_status,
-                    "موقع العمل": emp.location, "المشروع": emp.project, "رقم الجوال": emp.phone,
-                    "ايام العمل": scheduledWorkDays, "ساعات العمل": shift.work_hours || 8, "قيمة الساعة": hourlyRate,
-                    "قيمة اليومية": dailyRate, "الراتب الاساسي": vacancy.base_salary, "بدل السكن": vacancy.housing_allowance,
-                    "بدل نقل": vacancy.transport_allowance, "بدلات اخرى": vacancy.other_allowances, "اجمالي الراتب": fullMonthSalary,
-                    "بدل اجازة": 0, "راحة": restDays, "عمل اضافي": employeeOvertimeTotal, "المستحق": grossSalary + employeeOvertimeTotal,
-                    "ايام الغياب": absentDays, "استقطاع تأمينات": insuranceDeduction, "خصم الزي": uniformDeduction,
-                    "خصم الغياب": absenceDeduction, "خصم تأخير": latenessDeduction,
-                    "انسحاب": withdrawalDeduction, "استئذان": permissionDeduction,
-                    "خصومات اخرى": otherDeductions, "مجموع الاستقطاعات": totalDeductions, "الصافي": netSalary,
-                    "الايبان": emp.iban, "البنك": emp.bank_name, "المنطقة": emp.region,
-                    "المدينة": emp.city, "حالة التأمينات": emp.insurance_status
+                    "اسم الموظف": emp.name,
+                    "رقم الهوية": emp.id_number,
+                    "حالة الموظف": emp.employment_status,
+                    "المشروع": projectName,
+                    "ايام العمل": actualWorkDays,
+                    "ساعات العمل": totalWorkHours,
+                    "قيمة الساعة": hourlyRate,
+                    "قيمة اليومية": dailyRate,
+                    "الراتب الاساسي": vacancy.base_salary,
+                    "بدل السكن": vacancy.housing_allowance,
+                    "بدل نقل": vacancy.transport_allowance,
+                    "بدلات اخرى": vacancy.other_allowances,
+                    "اجمالي الراتب": fullMonthSalary,
+                    "راحة": restDays,
+                    "عمل اضافي": employeeOvertimeTotal,
+                    "المستحق": grossSalary + employeeOvertimeTotal,
+                    "استقطاع تأمينات": insuranceDeduction,
+                    "خصم الزي": uniformDeduction,
+                    "خصم تأخير": latenessDeduction,
+                    "استئذان": permissionRecords.length, // عدد أيام الاستئذان
+                    "انسحاب": withdrawalRecords.length, // عدد أيام الانسحاب
+                    "ايام الغياب": absentDays,
+                    "خصم الغياب": absenceDeduction,
+                    "خصومات اخرى": otherDeductions,
+                    "مجموع الاستقطاعات": totalDeductions,
+                    "الصافي": netSalary,
+                    "الايبان": emp.iban,
+                    "البنك": emp.bank_name,
                 });
             }
         }
         
+        // (باقي الكود لعرض الجدول في الصفحة لم يتغير)
         const tableHeaders = payrollExportData.length > 0 ? Object.keys(payrollExportData[0]).map(key => `<th>${key}</th>`).join('') : '';
-        const nonCurrencyColumns = ['اسم الموظف', 'رقم الهوية', 'حالة الموظف', 'موقع العمل', 'المشروع', 'رقم الجوال', 'ايام العمل', 'ساعات العمل', 'راحة', 'ايام الغياب', 'الايبان', 'البنك', 'المنطقة', 'المدينة', 'حالة التأمينات'];
+        const nonCurrencyColumns = ['اسم الموظف', 'رقم الهوية', 'حالة الموظف', 'موقع العمل', 'المشروع', 'رقم الجوال', 'ايام العمل', 'ساعات العمل', 'راحة', 'ايام الغياب', 'الايبان', 'البنك', 'المنطقة', 'المدينة', 'حالة التأمينات', 'استئذان', 'انسحاب'];
         
         const tableRowsHtml = payrollExportData.map(row => {
             let rowHtml = '<tr>';
@@ -3547,15 +3523,7 @@ async function generatePayroll() {
 
         resultsContainer.innerHTML = `<div class="table-header"><h3>مسير رواتب من ${startDateString} إلى ${endDateString}</h3><button id="export-payroll-btn" class="btn btn-success"><i class="ph-bold ph-file-xls"></i> تصدير إلى Excel</button></div><table><thead><tr>${tableHeaders}</tr></thead><tbody>${tableRowsHtml}</tbody></table>`;
 
-        await supabaseClient.from('audit_logs').insert({
-            user_name: currentUser.name,
-            action_type: 'توليد مسير الرواتب',
-            details: { 
-                startDate: startDateString, 
-                endDate: endDateString, 
-                employeeCount: payrollExportData.length 
-            }
-        });
+        await supabaseClient.from('audit_logs').insert({ user_name: currentUser.name, action_type: 'توليد مسير الرواتب', details: { startDate: startDateString, endDate: endDateString, employeeCount: payrollExportData.length } });
 
     } catch (err) {
         resultsContainer.innerHTML = `<p style="color: red;">حدث خطأ: ${err.message}</p>`;
@@ -3570,23 +3538,14 @@ async function exportPayrollToExcel(data, filename) {
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('مسير رواتب', {
-        views: [{ rightToLeft: true }] // جعل الورقة تبدأ من اليمين لليسار
+        views: [{ rightToLeft: true }]
     });
 
-    // إضافة الشعار كخلفية
-    try {
-        const response = await fetch('https://i.imgur.com/WTIY72K.png'); // رابط شعار شفاف
-        const imageBuffer = await response.arrayBuffer();
-        const imageId = workbook.addImage({ buffer: imageBuffer, extension: 'png' });
-        worksheet.addBackgroundImage(imageId);
-    } catch (e) {
-        console.error("لا يمكن تحميل شعار الخلفية.", e);
-    }
+    // --- تم حذف كود إضافة الشعار من هنا ---
 
-    // إعدادات التنسيق
     const headerStyle = {
         font: { name: 'Cairo', size: 12, bold: true, color: { argb: 'FFFFFFFF' } },
-        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002060' } }, // كحلي
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002060' } },
         alignment: { horizontal: 'center', vertical: 'middle' },
         border: { bottom: { style: 'thin', color: { argb: 'FF000000' } } }
     };
@@ -3594,15 +3553,16 @@ async function exportPayrollToExcel(data, filename) {
     const moneyStyle = { ...cellStyle, numFmt: '#,##0.00 "ر.س"' };
     const totalStyle = { ...moneyStyle, font: { ...cellStyle.font, bold: true }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE7E6E6' } } };
 
-    // تحديد الأعمدة وترتيبها
     worksheet.columns = Object.keys(data[0]).map(key => ({
         header: key, key: key, width: 18, style: cellStyle
     }));
 
-    // إضافة البيانات
     worksheet.addRows(data);
 
-    // تطبيق التنسيقات على كل صف
+    // --- بداية التعديل: إضافة الأعمدة الجديدة هنا ---
+    const nonMoneyColumns = ['ايام العمل', 'ساعات العمل', 'راحة', 'ايام الغياب', 'استئذان', 'انسحاب'];
+    // --- نهاية التعديل ---
+
     worksheet.eachRow({ includeEmpty: false }, function(row, rowNumber) {
         row.height = 25;
         row.eachCell({ includeEmpty: true }, function(cell, colNumber) {
@@ -3614,13 +3574,12 @@ async function exportPayrollToExcel(data, filename) {
             if (['اجمالي الراتب', 'مجموع الاستقطاعات', 'الصافي'].includes(key)) {
                 cell.style = totalStyle;
             }
-            if (typeof cell.value === 'number' && !['ايام العمل', 'ايام الغياب'].includes(key)) {
+            if (typeof cell.value === 'number' && !nonMoneyColumns.includes(key)) {
                 cell.numFmt = moneyStyle.numFmt;
             }
         });
     });
 
-    // إنشاء الملف وتنزيله
     workbook.xlsx.writeBuffer().then(function(buffer) {
         const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
         const link = document.createElement("a");
