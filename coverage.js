@@ -23,9 +23,26 @@ async function fetchAndDisplayOpenShifts() {
     }
     container.innerHTML = '';
     data.forEach(shift => {
+        // --- بداية الإضافة: تنظيف اسم المشروع ---
+        let projectName = shift.project;
+        try {
+            // التحقق إذا كان النص يبدأ وينتهي بأقواس القائمة
+            if (typeof projectName === 'string' && projectName.startsWith('[') && projectName.endsWith(']')) {
+                const parsed = JSON.parse(projectName);
+                // إذا كانت النتيجة قائمة، ندمج عناصرها
+                if (Array.isArray(parsed)) {
+                    projectName = parsed.join(', ');
+                }
+            }
+        } catch (e) {
+            // في حال فشل التحليل، نستخدم الاسم الأصلي كما هو
+            console.error("Could not parse project name, using original value:", shift.project);
+        }
+        // --- نهاية الإضافة ---
+
         const displayLocation = `${shift.city || ''} - ${shift.location || ''}`;
         const displayTime = `من ${formatTimeAMPM(shift.start_time)} إلى ${formatTimeAMPM(shift.end_time)}`;
-        container.insertAdjacentHTML('beforeend', `<div class="contract-card"><div class="contract-card-header"><h4>${shift.project}</h4></div><div class="contract-card-body"><p><i class="ph-bold ph-map-pin"></i> <strong>الموقع:</strong> ${displayLocation}</p><p><i class="ph-bold ph-clock"></i> <strong>الوقت:</strong> ${displayTime}</p><p><i class="ph-bold ph-money"></i> <strong>قيمة التغطية:</strong> ${shift.coverage_pay} ر.س</p></div><div class="contract-card-footer"><button class="btn btn-primary apply-now-btn" data-shift-id="${shift.id}"><i class="ph-bold ph-paper-plane-tilt"></i> قدم الآن</button></div></div>`);
+        container.insertAdjacentHTML('beforeend', `<div class="contract-card"><div class="contract-card-header"><h4>${projectName}</h4></div><div class="contract-card-body"><p><i class="ph-bold ph-map-pin"></i> <strong>الموقع:</strong> ${displayLocation}</p><p><i class="ph-bold ph-clock"></i> <strong>الوقت:</strong> ${displayTime}</p><p><i class="ph-bold ph-money"></i> <strong>قيمة التغطية:</strong> ${shift.coverage_pay} ر.س</p></div><div class="contract-card-footer"><button class="btn btn-primary apply-now-btn" data-shift-id="${shift.id}"><i class="ph-bold ph-paper-plane-tilt"></i> قدم الآن</button></div></div>`);
     });
 }
 
@@ -242,6 +259,7 @@ document.getElementById('coverage-application-form')?.addEventListener('submit',
                 id_number: document.getElementById('apply-id-number').value,
                 phone_number: document.getElementById('apply-phone').value,
                 iban: document.getElementById('apply-iban').value,
+                bank_name: document.getElementById('apply-bank-name').value,
                 id_photo_url: idUploadResult.data.path,
                 iban_certificate_url: ibanUploadResult.data.path,
                 status: 'pending_supervisor' // يذهب أولاً للمشرف
