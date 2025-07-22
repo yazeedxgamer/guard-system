@@ -384,19 +384,30 @@ async function loadSupervisorCoverageAppsPage() {
     if (!container || !currentUser || !currentUser.project) return;
     container.innerHTML = '<p style="text-align: center;">جاري تحميل الطلبات...</p>';
 
-    const { data: applications, error } = await supabaseClient
-        .from('coverage_applicants')
-        .select(`*, coverage_shifts!inner(project, location)`)
-        .eq('status', 'pending_supervisor') // فقط الطلبات بانتظار المشرف
-        .eq('coverage_shifts.project', currentUser.project) // فقط لمشروع المشرف الحالي
-        .is('applicant_user_id', null); // فقط للمتقدمين الخارجيين
+    // --- هنا التصحيح: استخدام الدالة الذكية الجديدة والمصححة ---
+    const { data: applications, error } = await supabaseClient.rpc('get_supervisor_coverage_apps_final', {
+        p_supervisor_projects: currentUser.project
+    });
 
-    if (error) { container.innerHTML = '<p style="color:red;">حدث خطأ.</p>'; return console.error(error); }
-    if (applications.length === 0) { container.innerHTML = '<p style="text-align: center;">لا توجد طلبات تغطية جديدة لمراجعتها.</p>'; return; }
+    if (error) { 
+        container.innerHTML = '<p style="color:red;">حدث خطأ.</p>'; 
+        console.error(error); 
+        return; 
+    }
+    if (!applications || applications.length === 0) { 
+        container.innerHTML = '<p style="text-align: center;">لا توجد طلبات تغطية جديدة لمراجعتها.</p>'; 
+        return; 
+    }
 
+    // بناء الواجهة من البيانات الصحيحة التي تم جلبها
     const groupedByShift = applications.reduce((acc, app) => {
         const shiftId = app.shift_id;
-        if (!acc[shiftId]) acc[shiftId] = { details: app.coverage_shifts, applicants: [] };
+        if (!acc[shiftId]) {
+            acc[shiftId] = { 
+                details: { project: app.shift_project, location: app.shift_location }, 
+                applicants: [] 
+            };
+        }
         acc[shiftId].applicants.push(app);
         return acc;
     }, {});
@@ -416,10 +427,10 @@ async function loadSupervisorCoverageAppsPage() {
                             <div class="attendance-card">
                                 <span>${applicant.full_name}</span>
                                 <div style="display: flex; gap: 10px;">
-                                    <button class="btn btn-secondary btn-sm view-coverage-applicant-btn" data-appid="${applicant.id}">
+                                    <button class="btn btn-secondary btn-sm view-coverage-applicant-btn" data-appid="${applicant.applicant_id}">
                                         <i class="ph-bold ph-eye"></i> عرض التفاصيل
                                     </button>
-                                    <button class="btn btn-success btn-sm nominate-coverage-applicant-btn" data-appid="${applicant.id}" data-shiftid="${shiftId}">
+                                    <button class="btn btn-success btn-sm nominate-coverage-applicant-btn" data-appid="${applicant.applicant_id}" data-shiftid="${shiftId}">
                                         <i class="ph-bold ph-check-fat"></i> ترشيح
                                     </button>
                                 </div>
@@ -522,7 +533,7 @@ async function loadOpsReviewRequestsPage() {
                 </div>
                 <div class="review-request-footer">
                     <button class="btn btn-success request-action-button" data-approval-stage="ops_escalate" data-action="approve" data-request-id="${request.id}">
-                        <i class="ph-bold ph-arrow-fat-up"></i> موافقة ورفع للموارد البشرية
+                        <i class="ph-bold ph-arrow-fat-up"></i>اعتماد 
                     </button>
                     <button class="btn btn-danger request-action-button" data-approval-stage="ops_escalate" data-action="reject" data-request-id="${request.id}">
                         <i class="ph-bold ph-x-circle"></i> رفض مباشر
@@ -596,7 +607,6 @@ async function loadGuardAttendancePage() {
         let guards = [];
         let queryError = null;
 
-        // --- هنا التعديل الرئيسي: استخدام الدالة الذكية للمشرف ---
         if (currentUser.role === 'مشرف') {
             const { data, error } = await supabaseClient.rpc('get_supervisor_guards', {
                 p_supervisor_projects: currentUser.project
@@ -604,8 +614,10 @@ async function loadGuardAttendancePage() {
             guards = data;
             queryError = error;
         } else {
-            // الطريقة القديمة تبقى لباقي الأدوار
-            let query = supabaseClient.from('users').select('id, name, project, location, region, city, job_vacancies!users_vacancy_id_fkey!inner(schedule_details)').eq('role', 'حارس أمن').eq('employment_status', 'اساسي');
+            let query = supabaseClient.from('users').select('id, name, project, location, region, city, employment_status, job_vacancies!users_vacancy_id_fkey(schedule_details)')
+                .eq('role', 'حارس أمن')
+                .in('employment_status', ['اساسي', 'تغطية']); 
+            
             if (currentUser.role === 'ادارة العمليات') query = query.eq('region', currentUser.region);
             const { data, error } = await query;
             guards = data;
@@ -623,13 +635,13 @@ async function loadGuardAttendancePage() {
             return;
         }
 
-        // (باقي الكود لعرض الحالات لم يتغير)
         const now = new Date();
         const currentDay = now.toLocaleString('en-US', { weekday: 'short' });
         const isAdmin = currentUser.role === 'مدير النظام';
         let guardsStatusHtml = '';
 
         for (const guard of guards) {
+            const isCoverageGuard = guard.employment_status === 'تغطية';
             const shift = guard.job_vacancies?.schedule_details?.[0];
             let status = { text: 'في راحة', class: 'off' };
             let actionButton = '';
@@ -641,8 +653,15 @@ async function loadGuardAttendancePage() {
 
             const latestAttendance = attendanceRecords.filter(r => r.guard_id === guard.id).sort((a,b) => new Date(b.created_at) - new Date(a.created_at))[0];
 
-            if (shift && shift.days && shift.days.includes(currentDay)) {
-                if (latestAttendance && latestAttendance.status !== 'اكمل المناوبة') {
+            if (isCoverageGuard) {
+                status.text = "تغطية";
+                 if (latestAttendance && latestAttendance.status === 'حاضر') {
+                    const checkInTime = new Date(latestAttendance.created_at).toLocaleTimeString('ar-SA', { timeStyle: 'short' });
+                    status.text = `حاضر (تغطية)`;
+                    status.class = 'present';
+                }
+            } else if (shift && shift.days && shift.days.includes(currentDay)) {
+                 if (latestAttendance && latestAttendance.status !== 'اكمل المناوبة') {
                     const checkInTime = new Date(latestAttendance.created_at).toLocaleTimeString('ar-SA', { timeStyle: 'short' });
                     if (latestAttendance.status === 'حاضر') {
                         status = { text: `حاضر (منذ ${checkInTime})`, class: 'present' };
@@ -903,7 +922,7 @@ async function loadUncoveredNeeds() {
     try {
         let query = supabaseClient.from('users').select('id, name, project, location, region, city, job_vacancies!users_vacancy_id_fkey!inner(schedule_details)').eq('role', 'حارس أمن').eq('employment_status', 'اساسي');
         if (currentUser.role === 'ادارة العمليات') query = query.eq('region', currentUser.region);
-        else if (currentUser.role === 'مشرف') query = query.in('project', currentUser.project); // <-- التعديل هنا
+        else if (currentUser.role === 'مشرف') query = createProjectFilter(query, currentUser.project);
 
         const { data: guards, error: e1 } = await query;
         if (e1) throw e1;
@@ -912,11 +931,22 @@ async function loadUncoveredNeeds() {
         const { data: attendanceRecords, error: e2 } = await supabaseClient.from('attendance').select('guard_id, status').gte('created_at', yesterday);
         if (e2) throw e2;
 
+        // --- الخطوة الجديدة: جلب الحراس الذين تم إنشاء تغطية لهم بالفعل ---
+        const { data: coveredShifts, error: e3 } = await supabaseClient.from('coverage_shifts').select('covered_user_id').not('covered_user_id', 'is', null);
+        if (e3) throw e3;
+        const coveredGuardIds = new Set(coveredShifts.map(s => s.covered_user_id));
+        // --- نهاية الخطوة الجديدة ---
+
         const now = new Date();
         const currentDay = now.toLocaleString('en-US', { weekday: 'short' });
         const uncoveredGuards = [];
 
         for (const guard of guards) {
+            // --- هنا التعديل: التأكد من أن الحارس لم يتم تغطيته بعد ---
+            if (coveredGuardIds.has(guard.id)) {
+                continue; // تخطي هذا الحارس لأنه مغطى بالفعل
+            }
+
             const shift = guard.job_vacancies?.schedule_details?.[0];
             if (shift && shift.days && shift.days.includes(currentDay)) {
                 const latestAttendance = attendanceRecords.find(r => r.guard_id === guard.id);
@@ -938,7 +968,7 @@ async function loadUncoveredNeeds() {
 
         container.innerHTML = '';
         uncoveredGuards.forEach(({ guard, shift }) => {
-            const shiftData = { project: guard.project, location: guard.location, region: guard.region, city: guard.city, ...shift };
+            const shiftData = { project: guard.project, location: guard.location, region: guard.region, city: guard.city, ...shift, absent_guard_id: guard.id };
             const cardHtml = `
                 <div class="hiring-card" style="border-left: 4px solid var(--denied-color);">
                     <div class="hiring-card-header">
@@ -947,7 +977,7 @@ async function loadUncoveredNeeds() {
                             <i class="ph-bold ph-plus"></i> إنشاء تغطية
                         </button>
                     </div>
-                    <p><i class="ph-bold ph-map-pin"></i> ${guard.project} - ${guard.location}</p>
+                    <p><i class="ph-bold ph-map-pin"></i> ${Array.isArray(guard.project) ? guard.project.join('') : guard.project} - ${guard.location}</p>
                     <p><i class="ph-bold ph-clock"></i> ${formatTimeAMPM(shift.start_time)} - ${formatTimeAMPM(shift.end_time)}</p>
                 </div>
             `;
@@ -2473,7 +2503,6 @@ async function loadCoverageRequestsPage() {
     if (!container || !currentUser || !currentUser.region) return;
     container.innerHTML = '<p style="text-align: center;">جاري تحميل الطلبات...</p>';
 
-    // جلب كل الطلبات التي تنتظر موافقة مدير العمليات في منطقته
     const { data: requests, error } = await supabaseClient
         .from('coverage_applicants')
         .select(`*, 
@@ -2489,10 +2518,9 @@ async function loadCoverageRequestsPage() {
     container.innerHTML = '';
     requests.forEach(request => {
         const shift = request.coverage_shifts;
-        const isEmployee = !!request.applicant_user_id; // التحقق إذا كان المتقدم موظفاً
+        const isEmployee = !!request.applicant_user_id;
         const applicantName = isEmployee ? request.users.name : request.full_name;
         
-        // تحديد الإجراءات بناءً على نوع المتقدم
         let footerHtml = '';
         if (isEmployee) {
             footerHtml = `
@@ -2503,9 +2531,10 @@ async function loadCoverageRequestsPage() {
                     <i class="ph-bold ph-x-circle"></i> رفض
                 </button>`;
         } else {
+            // --- هنا التصحيح: تمت إضافة data-shift-id للزر ---
             footerHtml = `
-                <button class="btn btn-primary ops-coverage-action-btn" data-action="approve_external" data-applicant-id="${request.id}">
-                    <i class="ph-bold ph-arrow-fat-up"></i> موافقة ورفع للموارد البشرية
+                <button class="btn btn-primary ops-coverage-action-btn" data-action="approve_external" data-applicant-id="${request.id}" data-shift-id="${request.shift_id}">
+                    <i class="ph-bold ph-arrow-fat-up"></i>اعتماد المتقدم
                 </button>
                 <button class="btn btn-danger ops-coverage-action-btn" data-action="reject" data-applicant-id="${request.id}">
                     <i class="ph-bold ph-x-circle"></i> رفض
@@ -2590,56 +2619,99 @@ async function loadMyDirectivesPage() {
 }
 // نهاية الاستبدال
 
+async function loadOpenVacanciesForCoverage() {
+    const container = document.getElementById('open-vacancies-for-coverage-container');
+    if (!container || !currentUser) return;
+    container.innerHTML = '<p style="text-align: center;">جاري تحميل الشواغر...</p>';
+
+    // --- بداية التصحيح: إضافة فلتر is_temporarily_covered ---
+    let query = supabaseClient.from('job_vacancies')
+        .select('*, schedule_details')
+        .eq('status', 'open')
+        .eq('is_temporarily_covered', false);
+    // --- نهاية التصحيح ---
+    
+    if (currentUser.role === 'ادارة العمليات') query = query.eq('region', currentUser.region);
+    else if (currentUser.role === 'مشرف') query = createProjectFilter(query, currentUser.project);
+
+    const { data: vacancies, error } = await query;
+    if (error) { container.innerHTML = '<p style="color:red">خطأ في جلب البيانات.</p>'; return; }
+    if (vacancies.length === 0) { container.innerHTML = '<p>لا توجد شواغر مفتوحة حالياً.</p>'; return; }
+    
+    container.innerHTML = '';
+    vacancies.forEach(vacancy => {
+        const shift = vacancy.schedule_details ? vacancy.schedule_details[0] : {};
+        const shiftData = {
+            project: vacancy.project,
+            location: vacancy.specific_location,
+            region: vacancy.region,
+            city: vacancy.location,
+            linked_vacancy_id: vacancy.id,
+            start_time: shift.start_time || '',
+            end_time: shift.end_time || ''
+        };
+
+        const cardHtml = `
+        <div class="hiring-card" style="border-left: 4px solid var(--accent-color);">
+            <div class="hiring-card-header">
+                <h5>${vacancy.title}: ${vacancy.project} - ${vacancy.specific_location}</h5>
+                <button class="btn btn-secondary btn-sm add-to-coverage-btn" data-shift='${JSON.stringify(shiftData)}'>
+                    <i class="ph-bold ph-plus"></i> إنشاء تغطية لهذا الشاغر
+                </button>
+            </div>
+        </div>
+        `;
+        container.insertAdjacentHTML('beforeend', cardHtml);
+    });
+}
+
 // بداية الاستبدال
 async function loadSupervisorSchedulesPage() {
     const container = document.getElementById('supervisor-schedules-container');
     if (!container || !currentUser) return;
     container.innerHTML = '<p style="text-align: center;">جاري تحميل جداول الحراس...</p>';
+    
+    let query = supabaseClient
+        .from('users')
+        .select(`name, project, job_vacancies!inner!users_vacancy_id_fkey(schedule_details)`)
+        .eq('role', 'حارس أمن')
+        .in('employment_status', ['اساسي', 'تغطية']);
 
-    let guards = [];
-    let queryError = null;
-
-    if (currentUser.role === 'مشرف') {
-        const { data, error } = await supabaseClient.rpc('get_supervisor_guard_schedules', {
-            p_supervisor_projects: currentUser.project
-        });
-        guards = data;
-        queryError = error;
-    } else {
-        // (الكود القديم يبقى كما هو للأدوار الأخرى)
-        let query = supabaseClient.from('users').select(`name, job_vacancies!inner!users_vacancy_id_fkey(schedule_details)`).eq('role', 'حارس أمن').eq('employment_status', 'اساسي');
-        if (currentUser.role === 'ادارة العمليات' && currentUser.region) {
-            query = query.eq('region', currentUser.region);
-        }
-        const { data, error } = await query;
-        guards = data;
-        queryError = error;
+    if (currentUser.role === 'ادارة العمليات' && currentUser.region) {
+        query = query.eq('region', currentUser.region);
+    } else if (currentUser.role === 'مشرف' && currentUser.project) {
+        query = createProjectFilter(query, currentUser.project);
     }
 
-    if (queryError) {
+    const { data: guards, error } = await query;
+
+    if (error) {
         container.innerHTML = '<p style="color:red;">حدث خطأ في جلب البيانات.</p>';
-        return console.error(queryError);
+        return console.error(error);
     }
-    if (!guards || guards.length === 0) {
+    if (guards.length === 0) {
         container.innerHTML = '<p style="text-align: center;">لا يوجد حراس لعرض جداولهم.</p>';
         return;
     }
 
     container.innerHTML = '';
     guards.forEach(guard => {
-        // بما أن الدالة الجديدة ترجع schedule_details مباشرة، نصل إليها هكذا:
-        const schedule = guard.schedule_details?.[0];
-        if (!schedule) return;
-
-        const dayTranslations = { Sat: 'السبت', Sun: 'الأحد', Mon: 'الاثنين', Tue: 'الثلاثاء', Wed: 'الأربعاء', Thu: 'الخميس', Fri: 'الجمعة' };
-        const workDays = schedule.days.map(day => dayTranslations[day] || day).join('، ');
+        const schedule = guard.job_vacancies?.schedule_details?.[0];
+        let scheduleDetailsHtml = '<p>حارس تغطية (جدول مؤقت)</p>';
+        if (schedule) {
+            const dayTranslations = { Sat: 'السبت', Sun: 'الأحد', Mon: 'الاثنين', Tue: 'الثلاثاء', Wed: 'الأربعاء', Thu: 'الخميس', Fri: 'الجمعة' };
+            const workDays = schedule.days.map(day => dayTranslations[day] || day).join('، ');
+            scheduleDetailsHtml = `
+                <div class="info-line"><i class="ph-bold ph-clock"></i><strong>الوقت:</strong> من ${formatTimeAMPM(schedule.start_time)} إلى ${formatTimeAMPM(schedule.end_time)}</div>
+                <div class="info-line"><i class="ph-bold ph-calendar-check"></i><strong>أيام العمل:</strong> ${workDays}</div>
+            `;
+        }
 
         container.insertAdjacentHTML('beforeend', `
             <div class="contract-card">
                 <div class="contract-card-header"><h4>${guard.name}</h4></div>
                 <div class="contract-card-body">
-                    <div class="info-line"><i class="ph-bold ph-clock"></i><strong>الوقت:</strong> من ${formatTimeAMPM(schedule.start_time)} إلى ${formatTimeAMPM(schedule.end_time)}</div>
-                    <div class="info-line"><i class="ph-bold ph-calendar-check"></i><strong>أيام العمل:</strong> ${workDays}</div>
+                    ${scheduleDetailsHtml}
                 </div>
             </div>
         `);
@@ -2654,6 +2726,7 @@ async function loadSupervisorSchedulesPage() {
 // دالة تحميل صفحة التغطيات (النسخة النهائية مع التبويبات)
 async function loadCoveragePage() {
     loadUncoveredNeeds();
+    loadOpenVacanciesForCoverage(); // التأكد من استدعاء الدالة هنا
     
     const listContainer = document.getElementById('coverage-shifts-list');
     if (!listContainer || !currentUser) return;
@@ -2662,14 +2735,20 @@ async function loadCoveragePage() {
     
     let query = supabaseClient.from('coverage_shifts').select('*').eq('status', 'open');
     if (currentUser.role === 'ادارة العمليات') query = query.eq('region', currentUser.region);
-    else if (currentUser.role === 'مشرف') query = createProjectFilter(query, currentUser.project); // <-- التعديل هنا
+    else if (currentUser.role === 'مشرف') query = createProjectFilter(query, currentUser.project);
     
     const { data: shifts, error } = await query.order('created_at', { ascending: false });
     if (error) { listContainer.innerHTML = '<p style="color:red;">حدث خطأ.</p>'; return; }
     if (shifts.length === 0) { listContainer.innerHTML = '<p>لا توجد فرص تغطية مفتوحة.</p>'; return; }
+    
     listContainer.innerHTML = shifts.map(shift => {
+        let cleanProjectName = shift.project;
+        if (typeof cleanProjectName === 'string') {
+            cleanProjectName = cleanProjectName.replace(/[\[\]",]/g, '').trim();
+        }
+
         const actionsHtml = `<div class="hiring-card-footer" style="padding: 10px 15px; border-top: 1px solid var(--border-color); display: flex; gap: 10px;"><button class="btn btn-secondary btn-sm edit-coverage-btn" data-shift-id="${shift.id}" style="flex-grow: 1;"><i class="ph-bold ph-pencil-simple"></i> تعديل</button><button class="btn btn-danger btn-sm delete-coverage-btn" data-shift-id="${shift.id}" style="flex-grow: 1;"><i class="ph-bold ph-trash"></i> حذف</button></div>`;
-        return `<div class="hiring-card coverage-shift-item" data-shift-id='${JSON.stringify(shift)}' style="cursor: pointer; padding:0; margin-bottom: 0;"><div style="padding: 15px;"><h5>${shift.project}</h5><p><i class="ph-bold ph-map-pin"></i> ${shift.location}</p><p><i class="ph-bold ph-clock"></i> ${formatTimeAMPM(shift.start_time)} - ${formatTimeAMPM(shift.end_time)}</p></div>${actionsHtml}</div>`;
+        return `<div class="hiring-card coverage-shift-item" data-shift-id='${JSON.stringify(shift)}' style="cursor: pointer; padding:0; margin-bottom: 0;"><div style="padding: 15px;"><h5>${cleanProjectName}</h5><p><i class="ph-bold ph-map-pin"></i> ${shift.location}</p><p><i class="ph-bold ph-clock"></i> ${formatTimeAMPM(shift.start_time)} - ${formatTimeAMPM(shift.end_time)}</p></div>${actionsHtml}</div>`;
     }).join('');
 
     document.querySelectorAll('#page-coverage .tab-link').forEach(tab => {
@@ -4698,17 +4777,34 @@ if (approveForFinanceBtn) {
 // --- منطق تعديل وحذف التغطيات ---
 
 // عند الضغط على زر "حذف تغطية"
+// عند الضغط على زر "حذف تغطية"
 const deleteCoverageBtn = event.target.closest('.delete-coverage-btn');
 if (deleteCoverageBtn) {
     const shiftId = deleteCoverageBtn.dataset.shiftId;
     if (confirm('هل أنت متأكد من حذف هذه التغطية بشكل نهائي؟')) {
+        // --- بداية الإضافة: جلب بيانات التغطية قبل الحذف ---
+        const { data: shiftToDelete, error: fetchError } = await supabaseClient
+            .from('coverage_shifts')
+            .select('linked_vacancy_id')
+            .eq('id', shiftId)
+            .single();
+        // --- نهاية الإضافة ---
+
         const { error } = await supabaseClient.from('coverage_shifts').delete().eq('id', shiftId);
         if (error) {
             showToast('حدث خطأ أثناء الحذف.', 'error');
         } else {
+            // --- بداية الإضافة: إعادة فتح الشاغر إذا كان مرتبطاً ---
+            if (fetchError === null && shiftToDelete && shiftToDelete.linked_vacancy_id) {
+                await supabaseClient
+                    .from('job_vacancies')
+                    .update({ is_temporarily_covered: false })
+                    .eq('id', shiftToDelete.linked_vacancy_id);
+            }
+            // --- نهاية الإضافة ---
             showToast('تم حذف التغطية بنجاح.', 'success');
             await supabaseClient.from('audit_logs').insert({ user_name: currentUser.name, action_type: 'حذف تغطية', details: { deleted_shift_id: shiftId } });
-            loadCoveragePage(); // تحديث القائمة
+            loadCoveragePage();
         }
     }
 }
@@ -5447,6 +5543,7 @@ if (event.target.closest('#check-in-btn')) {
 
 // --- منطق أزرار مراجعة طلبات التغطية لمدير العمليات ---
     // --- منطق أزرار مراجعة طلبات التغطية لمدير العمليات (النسخة الجديدة مع الاعتماد النهائي) ---
+// --- منطق أزرار مراجعة طلبات التغطية لمدير العمليات ---
 const opsCoverageBtn = event.target.closest('.ops-coverage-action-btn');
 if (opsCoverageBtn) {
     const applicantId = opsCoverageBtn.dataset.applicantId;
@@ -5457,7 +5554,7 @@ if (opsCoverageBtn) {
 
     try {
         if (action === 'approve_employee') {
-            if (!confirm('هل أنت متأكد؟ سيتم تعيين هذا الموظف للتغطية كعمل إضافي.')) return;
+            if (!confirm('هل أنت متأكد؟ سيتم تعيين هذا الموظف للتغطية كعمل إضافي.')) { opsCoverageBtn.disabled = false; return; }
             
             const { data: shift, error: e1 } = await supabaseClient.from('coverage_shifts').select('coverage_pay').eq('id', shiftId).single();
             const { data: applicant, error: e2 } = await supabaseClient.from('coverage_applicants').select('applicant_user_id').eq('id', applicantId).single();
@@ -5475,19 +5572,21 @@ if (opsCoverageBtn) {
             showToast('تم تعيين الموظف للتغطية بنجاح.', 'success');
 
         } else if (action === 'approve_external') {
-            if (!confirm('هل أنت متأكد؟ سيتم إنشاء حساب مؤقت للمتقدم وإغلاق هذه التغطية.')) return;
+            if (!confirm('هل أنت متأكد؟ سيتم إنشاء حساب مؤقت للمتقدم وإغلاق هذه التغطية.')) { opsCoverageBtn.disabled = false; return; }
             
+            // --- هنا التصحيح: تم إضافة shift_id للبيانات المرسلة ---
             const { data, error } = await supabaseClient.functions.invoke('assign-coverage-guard', {
-                body: { applicant_id: applicantId }
+                body: { 
+                    applicant_id: applicantId,
+                    shift_id: shiftId 
+                }
             });
         
             if (error || data.error) {
                 throw new Error(error?.message || data.error);
             }
             
-            // --- بداية الإضافة: إغلاق وردية التغطية ---
             await supabaseClient.from('coverage_shifts').update({ status: 'closed' }).eq('id', shiftId);
-            // --- نهاية الإضافة ---
 
             showToast('تم اعتماد المتقدم وتسكينه بنجاح. تم إغلاق التغطية.', 'success');
 
@@ -5915,123 +6014,119 @@ if (event.target.closest('.edit-employee-btn')) {
     const userId = event.target.closest('.edit-employee-btn').dataset.id;
     if (!userId) return;
 
-    // 1. جلب بيانات الموظف مع الشاغر المرتبط به
-    const { data: employee, error } = await supabaseClient.from('users').select('*, job_vacancies!users_vacancy_id_fkey(*)').eq('id', userId).single();
-    if (error || !employee) {
-        console.error('Employee fetch error:', error);
-        return alert('حدث خطأ في جلب بيانات الموظف.');
-    }
+    try {
+        // 1. جلب بيانات الموظف الأساسية بدون أي ربط مبدئياً
+        const { data: employee, error } = await supabaseClient
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single();
 
-    const modal = document.getElementById('employee-modal');
-    
-    // 2. تعبئة كل الحقول الموجودة حالياً في النموذج
-    document.getElementById('employee-modal-title').textContent = 'تعديل بيانات الموظف';
-    document.getElementById('employee-id').value = employee.id;
-    document.getElementById('employee-auth-id').value = employee.auth_user_id;
-    document.getElementById('employee-creation-mode').value = 'update';
-
-    // تعبئة البيانات الشخصية والوظيفية
-    document.getElementById('employee-name').value = employee.name || '';
-    document.getElementById('employee-id-number').value = employee.id_number || '';
-    document.getElementById('employee-phone').value = employee.phone || '';
-    document.getElementById('employee-role').value = employee.role || 'حارس أمن';
-    document.getElementById('employee-start-date').value = employee.start_of_work_date;
-    document.getElementById('employee-password').value = '';
-    document.getElementById('employee-password').placeholder = 'اتركه فارغاً لعدم التغيير';
-
-    // تعبئة البيانات المالية والإدارية (المحدثة)
-    document.getElementById('employee-iban').value = employee.iban || '';
-    document.getElementById('employee-bank-name').value = employee.bank_name || '';
-    document.getElementById('employee-insurance').value = employee.insurance_status || 'غير مسجل';
-    document.getElementById('employee-insurance-amount').value = employee.insurance_deduction_amount || 0;
-    document.getElementById('employee-status').value = employee.employment_status || 'اساسي'; // الحقل المدمج
-    document.getElementById('employee-id-number').disabled = true;
-
-    // --- بداية الإصلاح: معالجة عرض المشاريع المتعددة في حقل العرض ---
-    let projectDisplayText = 'غير معين';
-    if (employee.project && Array.isArray(employee.project) && employee.project.length > 0) {
-        projectDisplayText = employee.project.join(' - ');
-    } else if (employee.project && !Array.isArray(employee.project)) {
-        projectDisplayText = employee.project;
-    }
-    document.getElementById('employee-project-display').value = projectDisplayText;
-    // --- نهاية الإصلاح ---
-
-    document.getElementById('employee-location-display').value = employee.location || '';
-    document.getElementById('employee-region').value = employee.region || '';
-    document.getElementById('employee-city').value = employee.city || '';
-
-    // عرض تفاصيل الوردية الحالية
-    const shiftDisplay = document.getElementById('employee-shift-display');
-    const assignedVacancy = employee.job_vacancies;
-    if (employee.employment_status === 'بديل راحة') {
-        shiftDisplay.value = 'جدول ديناميكي (يغطي أيام الراحة)';
-    } else if (assignedVacancy && assignedVacancy.schedule_details?.[0]) {
-        const shift = assignedVacancy.schedule_details[0];
-        shiftDisplay.value = `${shift.name || 'وردية'} (من ${formatTimeAMPM(shift.start_time)} إلى ${formatTimeAMPM(shift.end_time)})`;
-    } else {
-        shiftDisplay.value = 'لا توجد وردية محددة';
-    }
-
-    // 3. جلب وتعبئة قوائم الشواغر والعقود
-    const vacancySelect = document.getElementById('employee-vacancy');
-    const contractSelect = document.getElementById('employee-contract');
-    vacancySelect.innerHTML = '<option value="">جاري التحميل...</option>';
-    contractSelect.innerHTML = '<option value="">جاري التحميل...</option>';
-
-    const { data: openVacancies } = await supabaseClient.from('job_vacancies').select('id, project, specific_location').eq('status', 'open');
-    let allRelevantVacancies = openVacancies || [];
-    if (assignedVacancy && !allRelevantVacancies.some(v => v.id === assignedVacancy.id)) {
-        allRelevantVacancies.push(assignedVacancy);
-    }
-    
-    const { data: contracts } = await supabaseClient.from('contracts').select('id, company_name').eq('status', 'active');
-
-    contractSelect.innerHTML = '<option value="">غير تابع لعقد</option>';
-    if (contracts) contractSelect.innerHTML += contracts.map(c => `<option value="${c.id}">${c.company_name}</option>`).join('');
-    contractSelect.value = employee.contract_id || '';
-
-    vacancySelect.innerHTML = '<option value="">غير مرتبط بشاغر</option>';
-    if (allRelevantVacancies.length > 0) {
-        vacancySelect.innerHTML += allRelevantVacancies.map(v => `<option value="${v.id}">${v.project} - ${v.specific_location || 'موقع عام'}</option>`).join('');
-    }
-    vacancySelect.value = employee.vacancy_id || '';
-
-    // إظهار حقول الصلاحيات للمشرفين ومدراء العمليات
-    const role = employee.role;
-    const assignmentGroup = document.getElementById('manager-assignment-group');
-    const regionGroup = document.getElementById('assign-region-group');
-    const projectGroup = document.getElementById('assign-project-group');
-    
-    assignmentGroup.classList.add('hidden');
-    regionGroup.classList.add('hidden');
-    projectGroup.classList.add('hidden');
-
-    if (role === 'ادارة العمليات') {
-        assignmentGroup.classList.remove('hidden');
-        regionGroup.classList.remove('hidden');
-        document.getElementById('assign-region-select').value = employee.region || '';
-    } else if (role === 'مشرف') {
-        assignmentGroup.classList.remove('hidden');
-        projectGroup.classList.remove('hidden');
-        const projectContainer = document.getElementById('assign-project-checkbox-container');
-        projectContainer.innerHTML = '<p>جاري تحميل المشاريع...</p>';
-
-        const { data: contractsForSupervisor } = await supabaseClient.from('contracts').select('company_name');
-        if (contractsForSupervisor) {
-            const projectNames = [...new Set(contractsForSupervisor.map(c => c.company_name))];
-            const supervisorProjects = employee.project || [];
-
-            const checkboxesHtml = projectNames.map(p => {
-                const isChecked = supervisorProjects.includes(p) ? 'checked' : '';
-                return `<label><input type="checkbox" value="${p}" ${isChecked}>${p}</label>`;
-            }).join('');
-            projectContainer.innerHTML = `<div class="checkbox-grid">${checkboxesHtml}</div>`;
+        if (error || !employee) {
+            throw new Error('لم يتم العثور على بيانات الموظف أو حدث خطأ.');
         }
+
+        const modal = document.getElementById('employee-modal');
+        
+        // 2. تعبئة الحقول العامة التي لا تعتمد على الشاغر
+        document.getElementById('employee-modal-title').textContent = 'تعديل بيانات الموظف';
+        document.getElementById('employee-id').value = employee.id;
+        document.getElementById('employee-auth-id').value = employee.auth_user_id;
+        document.getElementById('employee-creation-mode').value = 'update';
+        document.getElementById('employee-name').value = employee.name || '';
+        document.getElementById('employee-id-number').value = employee.id_number || '';
+        document.getElementById('employee-phone').value = employee.phone || '';
+        document.getElementById('employee-role').value = employee.role || 'حارس أمن';
+        document.getElementById('employee-start-date').value = employee.start_of_work_date;
+        document.getElementById('employee-password').value = '';
+        document.getElementById('employee-password').placeholder = 'اتركه فارغاً لعدم التغيير';
+        document.getElementById('employee-iban').value = employee.iban || '';
+        document.getElementById('employee-bank-name').value = employee.bank_name || '';
+        document.getElementById('employee-insurance').value = employee.insurance_status || 'غير مسجل';
+        document.getElementById('employee-insurance-amount').value = employee.insurance_deduction_amount || 0;
+        document.getElementById('employee-status').value = employee.employment_status || 'اساسي';
+        document.getElementById('employee-id-number').disabled = true;
+
+        // 3. التعامل مع الحقول المعتمدة على الدور (حارس أمن أو إداري)
+        const isSecurityGuard = employee.role === 'حارس أمن';
+        const vacancyAndContractFields = [
+            document.getElementById('employee-vacancy').parentElement,
+            document.getElementById('employee-contract').parentElement,
+            document.getElementById('employee-shift-display').parentElement
+        ];
+
+        if (isSecurityGuard) {
+            // إظهار حقول الشواغر للحراس
+            vacancyAndContractFields.forEach(el => el.classList.remove('hidden'));
+
+            const vacancySelect = document.getElementById('employee-vacancy');
+            const contractSelect = document.getElementById('employee-contract');
+            const shiftDisplay = document.getElementById('employee-shift-display');
+
+            // جلب قوائم الشواغر والعقود
+            const { data: openVacanciesData } = await supabaseClient.from('job_vacancies').select('id, project, specific_location').eq('status', 'open');
+            const { data: contractsData } = await supabaseClient.from('contracts').select('id, company_name');
+            const openVacancies = openVacanciesData || [];
+            const contracts = contractsData || [];
+
+            let allRelevantVacancies = [...openVacancies];
+            
+            // جلب الشاغر الحالي للموظف (إن وجد) وإضافته للقائمة
+            if (employee.vacancy_id) {
+                const { data: assignedVacancy } = await supabaseClient.from('job_vacancies').select('*').eq('id', employee.vacancy_id).single();
+                if (assignedVacancy) {
+                    if (!allRelevantVacancies.some(v => v.id === assignedVacancy.id)) {
+                        allRelevantVacancies.push(assignedVacancy);
+                    }
+                    if (assignedVacancy.schedule_details?.[0]) {
+                        const shift = assignedVacancy.schedule_details[0];
+                        shiftDisplay.value = `${shift.name || 'وردية'} (من ${formatTimeAMPM(shift.start_time)} إلى ${formatTimeAMPM(shift.end_time)})`;
+                    }
+                }
+            } else {
+                 shiftDisplay.value = 'لا توجد وردية محددة';
+            }
+            
+            // تعبئة القوائم وتحديد القيم الحالية
+            contractSelect.innerHTML = '<option value="">غير تابع لعقد</option>' + contracts.map(c => `<option value="${c.id}">${c.company_name}</option>`).join('');
+            vacancySelect.innerHTML = '<option value="">غير مرتبط بشاغر</option>' + allRelevantVacancies.map(v => `<option value="${v.id}">${v.project} - ${v.specific_location || 'موقع عام'}</option>`).join('');
+            contractSelect.value = employee.contract_id || '';
+            vacancySelect.value = employee.vacancy_id || '';
+
+        } else {
+            // إخفاء حقول الشواغر تماماً للموظفين الإداريين
+            vacancyAndContractFields.forEach(el => el.classList.add('hidden'));
+        }
+
+        // 4. التعامل مع صلاحيات المشرفين ومدراء العمليات
+        const assignmentGroup = document.getElementById('manager-assignment-group');
+        const regionGroup = document.getElementById('assign-region-group');
+        const projectGroup = document.getElementById('assign-project-group');
+        assignmentGroup.classList.add('hidden');
+        regionGroup.classList.add('hidden');
+        projectGroup.classList.add('hidden');
+
+        if (employee.role === 'ادارة العمليات') {
+            assignmentGroup.classList.remove('hidden');
+            regionGroup.classList.remove('hidden');
+            document.getElementById('assign-region-select').value = employee.region || '';
+        } else if (employee.role === 'مشرف') {
+            assignmentGroup.classList.remove('hidden');
+            projectGroup.classList.remove('hidden');
+            const projectContainer = document.getElementById('assign-project-checkbox-container');
+            const { data: contractsForSupervisorData } = await supabaseClient.from('contracts').select('company_name');
+            const contractsForSupervisor = contractsForSupervisorData || [];
+            const projectNames = [...new Set(contractsForSupervisor.map(c => c.company_name))];
+            const supervisorProjects = Array.isArray(employee.project) ? employee.project : [];
+            projectContainer.innerHTML = `<div class="checkbox-grid">${projectNames.map(p => `<label><input type="checkbox" value="${p}" ${supervisorProjects.includes(p) ? 'checked' : ''}> ${p}</label>`).join('')}</div>`;
+        }
+        
+        modal.classList.remove('hidden');
+
+    } catch (err) {
+        console.error('Employee fetch error:', err);
+        alert('حدث خطأ في جلب بيانات الموظف: ' + err.message);
     }
-    
-    // إظهار النافذة
-    modal.classList.remove('hidden');
 }
 
 
@@ -7492,12 +7587,20 @@ if (addToCoverageBtn) {
 // نهاية الاستبدال
 
 // عند الضغط على زر "حفظ وطرح للتغطية"
+// عند الضغط على زر "حفظ وطرح للتغطية"
 const saveCoverageBtn = event.target.closest('#save-coverage-shift-btn');
 if (saveCoverageBtn) {
     const originalShift = JSON.parse(document.getElementById('coverage-original-shift-details').value);
     
+    let cleanProjectName = originalShift.project;
+    if (Array.isArray(cleanProjectName)) {
+        cleanProjectName = cleanProjectName.join('');
+    } else if (typeof cleanProjectName === 'string') {
+        cleanProjectName = cleanProjectName.replace(/[\[\]",]/g, '').trim();
+    }
+
     const newCoverageShift = {
-        project: originalShift.project,
+        project: cleanProjectName,
         location: originalShift.location,
         region: originalShift.region,
         city: originalShift.city,
@@ -7505,8 +7608,10 @@ if (saveCoverageBtn) {
         end_time: document.getElementById('coverage-end-time').value,
         coverage_pay: parseFloat(document.getElementById('coverage-pay').value) || 0,
         reason: document.getElementById('coverage-reason').value,
-        status: 'open', // جاهزة للتقديم عليها
-        created_by: currentUser.id
+        status: 'open',
+        created_by: currentUser.id,
+        linked_vacancy_id: originalShift.linked_vacancy_id || null,
+        covered_user_id: originalShift.absent_guard_id || null
     };
 
     if (!newCoverageShift.coverage_pay || newCoverageShift.coverage_pay <= 0) {
@@ -7516,16 +7621,25 @@ if (saveCoverageBtn) {
     saveCoverageBtn.disabled = true;
     saveCoverageBtn.textContent = 'جاري الحفظ...';
 
-    // حفظ الوردية الجديدة في جدول 'coverage_shifts'
     const { error } = await supabaseClient.from('coverage_shifts').insert([newCoverageShift]);
     
     if (error) {
-        alert('حدث خطأ أثناء حفظ وردية التغطية. تأكد من إنشاء جدول coverage_shifts.');
+        alert('حدث خطأ أثناء حفظ وردية التغطية.');
         console.error("Save Coverage Error:", error);
     } else {
+        // --- بداية الإضافة: تحديث حالة الشاغر ---
+        if (newCoverageShift.linked_vacancy_id) {
+            await supabaseClient
+                .from('job_vacancies')
+                .update({ is_temporarily_covered: true })
+                .eq('id', newCoverageShift.linked_vacancy_id);
+        }
+        // --- نهاية الإضافة ---
+
         alert('تم طرح الوردية للتغطية بنجاح!');
         document.getElementById('add-to-coverage-modal').classList.add('hidden');
-        // يمكننا هنا لاحقاً إضافة دالة لتحديث صفحة التغطيات
+        loadUncoveredNeeds();
+        loadCoveragePage();
     }
 
     saveCoverageBtn.disabled = false;
@@ -8158,87 +8272,124 @@ if (event.target.closest('.hire-new-btn')) {
     if (vacancyId) vacancySelect.value = vacancyId;
 }
 // نهاية الاستبدال
-// --- عند الضغط على زر "تعديل الموظف" (النسخة النهائية والمبسطة) ---
+// --- عند الضغط على زر "تعديل الموظف" (النسخة النهائية والمحصّنة ضد النقرات المزدوجة) ---
 if (event.target.closest('.edit-employee-btn')) {
-    const userId = event.target.closest('.edit-employee-btn').dataset.id;
-    if (!userId) return;
+    const editBtn = event.target.closest('.edit-employee-btn');
+    const userId = editBtn.dataset.id;
 
-    // 1. جلب بيانات الموظف مع الشاغر المرتبط به
-    const { data: employee, error } = await supabaseClient.from('users').select('*, job_vacancies!users_vacancy_id_fkey(*)').eq('id', userId).single();
-    if (error || !employee) {
-        console.error('Employee fetch error:', error);
-        return alert('حدث خطأ في جلب بيانات الموظف.');
+    // --- الخطوة 1: التحقق من أن الزر غير معطل بالفعل ---
+    if (!userId || editBtn.disabled) return;
+
+    // --- الخطوة 2: تعطيل الزر فوراً وإظهار مؤشر التحميل ---
+    const originalBtnContent = editBtn.innerHTML;
+    editBtn.disabled = true;
+    editBtn.innerHTML = '<i class="ph-fill ph-spinner-gap animate-spin"></i>';
+
+    try {
+        // جلب بيانات الموظف الأساسية
+        const { data: employee, error } = await supabaseClient
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single();
+
+        if (error || !employee) {
+            throw new Error('لم يتم العثور على بيانات الموظف أو حدث خطأ.');
+        }
+
+        const modal = document.getElementById('employee-modal');
+        
+        // تعبئة الحقول العامة
+        document.getElementById('employee-modal-title').textContent = 'تعديل بيانات الموظف';
+        document.getElementById('employee-id').value = employee.id;
+        document.getElementById('employee-auth-id').value = employee.auth_user_id;
+        document.getElementById('employee-creation-mode').value = 'update';
+        document.getElementById('employee-name').value = employee.name || '';
+        document.getElementById('employee-id-number').value = employee.id_number || '';
+        document.getElementById('employee-phone').value = employee.phone || '';
+        document.getElementById('employee-role').value = employee.role || 'حارس أمن';
+        document.getElementById('employee-start-date').value = employee.start_of_work_date;
+        document.getElementById('employee-password').value = '';
+        document.getElementById('employee-password').placeholder = 'اتركه فارغاً لعدم التغيير';
+        document.getElementById('employee-iban').value = employee.iban || '';
+        document.getElementById('employee-bank-name').value = employee.bank_name || '';
+        document.getElementById('employee-insurance').value = employee.insurance_status || 'غير مسجل';
+        document.getElementById('employee-insurance-amount').value = employee.insurance_deduction_amount || 0;
+        document.getElementById('employee-status').value = employee.employment_status || 'اساسي';
+        document.getElementById('employee-id-number').disabled = true;
+
+        // التعامل مع الحقول المعتمدة على الدور
+        const isSecurityGuard = employee.role === 'حارس أمن';
+        const vacancyAndContractFields = [
+            document.getElementById('employee-vacancy').parentElement,
+            document.getElementById('employee-contract').parentElement,
+            document.getElementById('employee-shift-display').parentElement
+        ];
+
+        if (isSecurityGuard) {
+            vacancyAndContractFields.forEach(el => el.classList.remove('hidden'));
+            const vacancySelect = document.getElementById('employee-vacancy');
+            const contractSelect = document.getElementById('employee-contract');
+            const shiftDisplay = document.getElementById('employee-shift-display');
+
+            const { data: openVacanciesData } = await supabaseClient.from('job_vacancies').select('id, project, specific_location').eq('status', 'open');
+            const { data: contractsData } = await supabaseClient.from('contracts').select('id, company_name');
+            const openVacancies = openVacanciesData || [];
+            const contracts = contractsData || [];
+            let allRelevantVacancies = [...openVacancies];
+            
+            if (employee.vacancy_id) {
+                const { data: assignedVacancy } = await supabaseClient.from('job_vacancies').select('*').eq('id', employee.vacancy_id).single();
+                if (assignedVacancy) {
+                    if (!allRelevantVacancies.some(v => v.id === assignedVacancy.id)) {
+                        allRelevantVacancies.push(assignedVacancy);
+                    }
+                    if (assignedVacancy.schedule_details?.[0]) {
+                        const shift = assignedVacancy.schedule_details[0];
+                        shiftDisplay.value = `${shift.name || 'وردية'} (من ${formatTimeAMPM(shift.start_time)} إلى ${formatTimeAMPM(shift.end_time)})`;
+                    }
+                }
+            } else {
+                 shiftDisplay.value = 'لا توجد وردية محددة';
+            }
+            
+            contractSelect.innerHTML = '<option value="">غير تابع لعقد</option>' + contracts.map(c => `<option value="${c.id}">${c.company_name}</option>`).join('');
+            vacancySelect.innerHTML = '<option value="">غير مرتبط بشاغر</option>' + allRelevantVacancies.map(v => `<option value="${v.id}">${v.project} - ${v.specific_location || 'موقع عام'}</option>`).join('');
+            contractSelect.value = employee.contract_id || '';
+            vacancySelect.value = employee.vacancy_id || '';
+        } else {
+            vacancyAndContractFields.forEach(el => el.classList.add('hidden'));
+        }
+
+        // التعامل مع صلاحيات المدراء
+        const assignmentGroup = document.getElementById('manager-assignment-group');
+        const regionGroup = document.getElementById('assign-region-group');
+        const projectGroup = document.getElementById('assign-project-group');
+        [assignmentGroup, regionGroup, projectGroup].forEach(el => el.classList.add('hidden'));
+
+        if (employee.role === 'ادارة العمليات') {
+            [assignmentGroup, regionGroup].forEach(el => el.classList.remove('hidden'));
+            document.getElementById('assign-region-select').value = employee.region || '';
+        } else if (employee.role === 'مشرف') {
+            [assignmentGroup, projectGroup].forEach(el => el.classList.remove('hidden'));
+            const projectContainer = document.getElementById('assign-project-checkbox-container');
+            const { data: contractsForSupervisorData } = await supabaseClient.from('contracts').select('company_name');
+            const contractsForSupervisor = contractsForSupervisorData || [];
+            const projectNames = [...new Set(contractsForSupervisor.map(c => c.company_name))];
+            const supervisorProjects = Array.isArray(employee.project) ? employee.project : [];
+            projectContainer.innerHTML = `<div class="checkbox-grid">${projectNames.map(p => `<label><input type="checkbox" value="${p}" ${supervisorProjects.includes(p) ? 'checked' : ''}> ${p}</label>`).join('')}</div>`;
+        }
+        
+        modal.classList.remove('hidden');
+
+    } catch (err) {
+        console.error('Employee fetch error:', err);
+        alert('حدث خطأ في جلب بيانات الموظف: ' + err.message);
+    } finally {
+        // --- الخطوة 3: إعادة تفعيل الزر وإرجاع محتواه الأصلي في كل الحالات ---
+        editBtn.disabled = false;
+        editBtn.innerHTML = originalBtnContent;
     }
-
-    const modal = document.getElementById('employee-modal');
-    
-    // 2. تعبئة كل الحقول الموجودة حالياً في النموذج
-    document.getElementById('employee-modal-title').textContent = 'تعديل بيانات الموظف';
-    document.getElementById('employee-id').value = employee.id;
-    document.getElementById('employee-auth-id').value = employee.auth_user_id;
-    document.getElementById('employee-creation-mode').value = 'update';
-
-    // تعبئة البيانات الشخصية والوظيفية
-    document.getElementById('employee-name').value = employee.name || '';
-    document.getElementById('employee-id-number').value = employee.id_number || '';
-    document.getElementById('employee-phone').value = employee.phone || '';
-    document.getElementById('employee-role').value = employee.role || 'حارس أمن';
-    document.getElementById('employee-start-date').value = employee.start_of_work_date;
-    document.getElementById('employee-password').value = '';
-    document.getElementById('employee-password').placeholder = 'اتركه فارغاً لعدم التغيير';
-
-    // تعبئة البيانات المالية والإدارية (المحدثة)
-    document.getElementById('employee-iban').value = employee.iban || '';
-    document.getElementById('employee-bank-name').value = employee.bank_name || '';
-    document.getElementById('employee-insurance').value = employee.insurance_status || 'غير مسجل';
-    document.getElementById('employee-insurance-amount').value = employee.insurance_deduction_amount || 0;
-    document.getElementById('employee-status').value = employee.employment_status || 'اساسي'; // الحقل المدمج
-
-    // تعبئة بيانات التسكين الوظيفي
-    document.getElementById('employee-region').value = employee.region || '';
-    document.getElementById('employee-city').value = employee.city || '';
-    document.getElementById('employee-project-display').value = employee.project || '';
-    document.getElementById('employee-location-display').value = employee.location || '';
-    document.getElementById('employee-id-number').disabled = true;
-
-    // عرض تفاصيل الوردية الحالية
-    const shiftDisplay = document.getElementById('employee-shift-display');
-    const assignedVacancy = employee.job_vacancies;
-    if (employee.employment_status === 'بديل راحة') {
-        shiftDisplay.value = 'جدول ديناميكي (يغطي أيام الراحة)';
-    } else if (assignedVacancy && assignedVacancy.schedule_details?.[0]) {
-        const shift = assignedVacancy.schedule_details[0];
-        shiftDisplay.value = `${shift.name || 'وردية'} (من ${formatTimeAMPM(shift.start_time)} إلى ${formatTimeAMPM(shift.end_time)})`;
-    } else {
-        shiftDisplay.value = 'لا توجد وردية محددة';
-    }
-
-    // 3. جلب وتعبئة قوائم الشواغر والعقود
-    const vacancySelect = document.getElementById('employee-vacancy');
-    const contractSelect = document.getElementById('employee-contract');
-    vacancySelect.innerHTML = '<option value="">جاري التحميل...</option>';
-    contractSelect.innerHTML = '<option value="">جاري التحميل...</option>';
-
-    const { data: openVacancies } = await supabaseClient.from('job_vacancies').select('id, project, specific_location').eq('status', 'open');
-    let allRelevantVacancies = openVacancies || [];
-    if (assignedVacancy && !allRelevantVacancies.some(v => v.id === assignedVacancy.id)) {
-        allRelevantVacancies.push(assignedVacancy);
-    }
-    
-    const { data: contracts } = await supabaseClient.from('contracts').select('id, company_name').eq('status', 'active');
-
-    contractSelect.innerHTML = '<option value="">غير تابع لعقد</option>';
-    if (contracts) contractSelect.innerHTML += contracts.map(c => `<option value="${c.id}">${c.company_name}</option>`).join('');
-    contractSelect.value = employee.contract_id || '';
-
-    vacancySelect.innerHTML = '<option value="">غير مرتبط بشاغر</option>';
-    if (allRelevantVacancies.length > 0) {
-        vacancySelect.innerHTML += allRelevantVacancies.map(v => `<option value="${v.id}">${v.project} - ${v.specific_location || 'موقع عام'}</option>`).join('');
-    }
-    vacancySelect.value = employee.vacancy_id || '';
-    
-    // إظهار النافذة
-    modal.classList.remove('hidden');
 }
 // بداية الاستبدال
 // --- عند الضغط على زر "حفظ الموظف" (النسخة النهائية مع هيكل بيانات موحد) ---
@@ -8304,17 +8455,37 @@ if (event.target.closest('#save-employee-btn')) {
 
         // 3. تنفيذ عملية الحفظ بناءً على وضع الإنشاء
         if (creationMode === 'update') {
+            const newPassword = document.getElementById('employee-password').value;
+
+            // --- الخطوة 1: تحديث كلمة المرور أولاً (فقط إذا تم إدخالها) ---
+            if (newPassword && newPassword.trim() !== '') {
+                if (newPassword.length < 6) {
+                    throw new Error('كلمة المرور يجب أن تكون 6 أحرف على الأقل.');
+                }
+                // --- إضافة تحقق مهم جداً ---
+                if (!authId) {
+                    throw new Error('لا يمكن تحديث كلمة المرور. معرّف المصادقة الخاص بالموظف مفقود.');
+                }
+                
+                const { data, error: passwordError } = await supabaseClient.functions.invoke('update-employee-password', {
+                    body: { auth_id: authId, new_password: newPassword }
+                });
+
+                // التحقق من وجود خطأ مرسل من الدالة نفسها
+                if (passwordError || (data && data.error)) {
+                    throw new Error(passwordError?.message || data.error || 'فشل تحديث كلمة المرور.');
+                }
+            }
+
+            // --- الخطوة 2: تحديث باقي بيانات الموظف ---
             const { error: updateError } = await supabaseClient.from('users').update(profileData).eq('id', employeeId);
             if (updateError) throw updateError;
+
+            // --- الخطوة 3: تحديث حالة الشاغر إذا لزم الأمر ---
             if (profileData.vacancy_id && profileData.employment_status !== 'اجازة') {
                 await supabaseClient.from('job_vacancies').update({ status: 'closed' }).eq('id', profileData.vacancy_id);
             }
-            const newPassword = document.getElementById('employee-password').value;
-            if (newPassword) {
-                if (newPassword.length < 6) throw new Error('كلمة المرور يجب أن تكون 6 أحرف على الأقل.');
-                const { error: passwordError } = await supabaseClient.functions.invoke('update-employee-password', { body: { auth_id: authId, new_password: newPassword } });
-                if (passwordError) throw passwordError;
-            }
+            
             alert('تم تحديث بيانات الموظف بنجاح.');
 
         } else if (creationMode === 'request') {
